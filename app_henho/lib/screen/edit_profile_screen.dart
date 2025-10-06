@@ -11,36 +11,48 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController(text: 'Nguyễn Văn A');
-  int _age = 25; // Sử dụng biến int thay cho TextEditingController
+  int _age = 25;
   final _locationController = TextEditingController(text: 'Hà Nội');
   final _bioController = TextEditingController(
     text: 'Tôi thích du lịch, đọc sách và gặp gỡ bạn mới.',
   );
 
-  XFile? _avatar;
   final ImagePicker _picker = ImagePicker();
+  List<XFile?> _images = List<XFile?>.filled(6, null, growable: false);
 
   // Danh sách sở thích mẫu
-  final List<String> _allHobbies = [
-    'Du lịch',
-    'Đọc sách',
-    'Âm nhạc',
-    'Thể thao',
-    'Nấu ăn',
-    'Chụp ảnh',
+  final List<String> hobbies = [
+    'Nghệ thuật',
+    'Bơi lội',
     'Xem phim',
+    'Nhạc cụ',
+    'Du lịch',
+    'Ẩm thực',
+    'Thể thao',
+    'Đọc sách',
+    'Chụp ảnh',
     'Công nghệ',
   ];
-  final List<String> _selectedHobbies = ['Du lịch', 'Đọc sách'];
 
-  Future<void> _pickImage() async {
+  // Sở thích đã chọn
+  final Set<String> selectedHobbies = {};
+
+  Future<void> _pickImage(int index) async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _avatar = pickedFile;
+        _images[index] = pickedFile;
       });
     }
   }
+
+  void _removeImage(int index) {
+    setState(() {
+      _images[index] = null;
+    });
+  }
+
+  int get imageCount => _images.where((img) => img != null).length;
 
   @override
   Widget build(BuildContext context) {
@@ -55,26 +67,101 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 16),
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: _avatar != null
-                        ? Image.file(File(_avatar!.path)).image
-                        : const AssetImage('assets/images/avatar.png'),
-                    backgroundColor: Colors.pink.shade100,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ảnh hồ sơ (${imageCount}/6)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.pinkAccent,
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.pinkAccent,
-                    ),
-                    onPressed: _pickImage,
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(height: 8),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 6,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.8,
+                ),
+                itemBuilder: (context, index) {
+                  final img = _images[index];
+                  return Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _pickImage(index),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.pink.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.pinkAccent,
+                              width: img == null ? 1 : 2,
+                            ),
+                          ),
+                          child: img == null
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(
+                                      Icons.add_a_photo,
+                                      color: Colors.pink,
+                                      size: 32,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Thêm ảnh',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ],
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.file(
+                                    File(img.path),
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      if (img != null)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black45,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              if (imageCount < 2)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Bạn cần chọn ít nhất 2 ảnh!',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
               const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
@@ -151,33 +238,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 maxLines: 3,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Sở thích',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
+                    fontSize: 16,
                     color: Colors.pinkAccent,
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: _allHobbies.map((hobby) {
-                  final isSelected = _selectedHobbies.contains(hobby);
-                  return FilterChip(
+                runSpacing: 8,
+                children: hobbies.map((hobby) {
+                  final isSelected = selectedHobbies.contains(hobby);
+                  return ChoiceChip(
                     label: Text(hobby),
                     selected: isSelected,
-                    selectedColor: Colors.pink.shade100,
-                    checkmarkColor: Colors.pink,
+                    selectedColor: Colors.pinkAccent,
+                    backgroundColor: Colors.pink.shade50,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.pinkAccent,
+                    ),
                     onSelected: (selected) {
                       setState(() {
                         if (selected) {
-                          _selectedHobbies.add(hobby);
+                          selectedHobbies.add(hobby);
                         } else {
-                          _selectedHobbies.remove(hobby);
+                          selectedHobbies.remove(hobby);
                         }
                       });
                     },
@@ -196,10 +288,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  onPressed: () {
-                    // Xử lý lưu thông tin chỉnh sửa
-                    Navigator.pop(context);
-                  },
+                  onPressed: imageCount < 2
+                      ? null
+                      : () {
+                          // Xử lý lưu thông tin chỉnh sửa
+                          Navigator.pop(context);
+                        },
                   child: const Text('Lưu thay đổi'),
                 ),
               ),

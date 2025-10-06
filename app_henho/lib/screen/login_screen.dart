@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import 'home_screen.dart'; // Thêm màn hình chính
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,7 +25,9 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text == _fakePassword) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(showLoginSuccess: true),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
