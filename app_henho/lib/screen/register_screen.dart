@@ -5,61 +5,98 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _formKey = GlobalKey<FormState>();
+    final _emailController = TextEditingController();
+    final _passwordController = TextEditingController();
+    final _nameController = TextEditingController();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng ký'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Đăng ký tài khoản'),
+        backgroundColor: Colors.pinkAccent,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
           child: Column(
             children: [
-              const SizedBox(height: 60),
-              const Text(
-                'Tạo tài khoản mới',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+              const SizedBox(height: 40),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Họ và tên',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Vui lòng nhập họ tên';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 32),
-              TextField(
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Vui lòng nhập email';
+                  }
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    return 'Email không hợp lệ';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              TextField(
+              TextFormField(
+                controller: _passwordController,
                 decoration: const InputDecoration(
                   labelText: 'Mật khẩu',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
                 ),
                 obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Xác nhận mật khẩu',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Vui lòng nhập mật khẩu';
+                  }
+                  if (value.length < 6) {
+                    return 'Mật khẩu phải từ 6 ký tự';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pinkAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
                   onPressed: () {
-                    // Xử lý đăng ký ở đây
+                    if (_formKey.currentState!.validate()) {
+                      // Xử lý đăng ký tài khoản
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đăng ký thành công!')),
+                      );
+                      Navigator.pop(context);
+                    }
                   },
                   child: const Text('Đăng ký'),
                 ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Quay lại màn hình đăng nhập
-                },
-                child: const Text('Đã có tài khoản? Đăng nhập'),
               ),
             ],
           ),

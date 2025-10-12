@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_screen.dart';
-import 'login_screen.dart';
+import '../login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  void _logout(BuildContext context) {
+  void _logout(BuildContext context) async {
+    // Xóa trạng thái đăng nhập
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),

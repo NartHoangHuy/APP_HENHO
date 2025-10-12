@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screen/login_screen.dart'; // Sửa đường dẫn import cho đúng
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screen/login_screen.dart';
+import 'screen/user/home_screen.dart';
+import 'screen/admin/admin_dashboard_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,14 +11,37 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  Future<Map<String, dynamic>> checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    final role = prefs.getString('role') ?? 'user';
+    return {'isLoggedIn': isLoggedIn, 'role': role};
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'App Hẹn Hò',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.pinkAccent),
       ),
-      home: const LoginScreen(), // Đặt màn hình đăng nhập là màn hình chính
+      home: FutureBuilder<Map<String, dynamic>>(
+        future: checkLoginStatus(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final isLoggedIn = snapshot.data!['isLoggedIn'] as bool;
+          final role = snapshot.data!['role'] as String;
+          if (!isLoggedIn) {
+            return LoginScreen();
+          }
+          if (role == 'admin') {
+            return AdminDashboardScreen();
+          }
+          return HomeScreen();
+        },
+      ),
     );
   }
 }

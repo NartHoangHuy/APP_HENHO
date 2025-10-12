@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import 'home_screen.dart';
+import 'user/home_screen.dart';
+import 'admin/admin_dashboard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,15 +21,31 @@ class _LoginScreenState extends State<LoginScreen> {
   final String _fakeEmail = 'test@email.com';
   final String _fakePassword = '123456';
 
-  void _login() {
+  // Dữ liệu ảo: admin
+  final String _adminEmail = 'admin@email.com';
+  final String _adminPassword = 'admin123';
+
+  void _login() async {
     if (_formKey.currentState!.validate()) {
       if (_emailController.text == _fakeEmail &&
           _passwordController.text == _fakePassword) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('role', 'user');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => const HomeScreen(showLoginSuccess: true),
           ),
+        );
+      } else if (_emailController.text == _adminEmail &&
+          _passwordController.text == _adminPassword) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('role', 'admin');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
