@@ -16,7 +16,7 @@ class _UserListScreenState extends State<UserListScreen> {
     {'name': 'Trẩn Hoàng Huy', 'email': 'huy@gmail.com', 'status': 'Hoạt động'},
     //them du lieu Tran Hoang Huydasdasdasdasdas
     //test git
-    {'name': 'Trẩn Hữu Trí', 'email': 'trí@gmail.com', 'status': 'Hoạt động'},
+    {'name': 'Trí Huy', 'email': 'trí@gmail.com', 'status': 'Hoạt động'},
   ];
 
   void _deleteUser(int index) {
