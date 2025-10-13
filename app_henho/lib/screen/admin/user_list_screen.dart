@@ -13,6 +13,8 @@ class _UserListScreenState extends State<UserListScreen> {
     {'name': 'Nguyễn Văn A', 'email': 'a@gmail.com', 'status': 'Hoạt động'},
     {'name': 'Mai Lan', 'email': 'lan@gmail.com', 'status': 'Bị khóa'},
     {'name': 'Hoàng Nam', 'email': 'nam@gmail.com', 'status': 'Hoạt động'},
+    {'name': 'Trẩn Hoàng Huy', 'email': 'huy@gmail.com', 'status': 'Hoạt động'},
+    //them du lieu Tran Hoang Huydasdasdasdasdas
   ];
 
   void _deleteUser(int index) {
