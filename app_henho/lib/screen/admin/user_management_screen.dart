@@ -13,6 +13,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     {'name': 'Nguyễn Văn A', 'email': 'a@gmail.com', 'status': 'Hoạt động'},
     {'name': 'Mai Lan', 'email': 'lan@gmail.com', 'status': 'Bị khóa'},
     {'name': 'Hoàng Nam', 'email': 'nam@gmail.com', 'status': 'Hoạt động'},
+    {'name': 'Trí', 'email': 'nam@gmail.com', 'status': 'Hoạt động'},
   ];
 
   void _deleteUser(int index) {
