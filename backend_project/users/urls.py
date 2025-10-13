@@ -1,18 +1,8 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import UserProfileViewSet
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-
-router = DefaultRouter()
-router.register(r'', UserProfileViewSet)
+from django.urls import path
+from .views import RegisterAPIView, LoginAPIView, GoogleSignInAPIView
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('register/',
-         UserProfileViewSet.as_view({'post': 'create'}), name='register'),
-    path('login/', TokenObtainPairView.as_view(), name='login'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('register/', RegisterAPIView.as_view(), name='register'),
+    path('login/', LoginAPIView.as_view(), name='login'),
+    path('google-signin/', GoogleSignInAPIView.as_view(), name='google_signin'),
 ]
