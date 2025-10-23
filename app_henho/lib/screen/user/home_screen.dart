@@ -1,7 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'profile_screen.dart';
 import 'chat_screen.dart';
 import 'discover_screen.dart';
+import 'like_screen.dart';
+
+class Candidate {
+  final String name;
+  final String age;
+  final String bio;
+  final String avatar;
+
+  Candidate({
+    required this.name,
+    required this.age,
+    required this.bio,
+    required this.avatar,
+  });
+}
+
+class CandidateCard extends StatelessWidget {
+  final Candidate candidate;
+  final CardSwiperController controller;
+  const CandidateCard(this.candidate, this.controller, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 24),
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.pink.shade100,
+            backgroundImage: AssetImage(candidate.avatar),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '${candidate.name}, ${candidate.age}',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            candidate.bio,
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.pinkAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                icon: const Icon(Icons.close),
+                label: const Text('Bỏ qua'),
+                onPressed: () {
+                  controller.swipe(CardSwiperDirection.left);
+                },
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.pinkAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                icon: const Icon(Icons.favorite),
+                label: const Text('Kết nối'),
+                onPressed: () {
+                  controller.swipe(CardSwiperDirection.right);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   final bool showLoginSuccess;
@@ -17,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static final List<Widget> _pages = [
     HomeContent(),
     DiscoverScreen(),
+    LikeScreen(),
     ChatScreen(),
     ProfileScreen(),
   ];
@@ -24,8 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> _titles = [
     'Trang chủ',
     'Khám phá',
+    'Lượt thích',
     'Tin nhắn',
-    'Trang cá nhân',
+    'Hồ sơ',
   ];
 
   @override
@@ -72,6 +160,11 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Khám phá',
           ),
           NavigationDestination(
+            icon: Icon(Icons.favorite_border),
+            selectedIcon: Icon(Icons.favorite, color: Colors.pink),
+            label: 'Lượt thích',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble, color: Colors.pink),
             label: 'Chat',
@@ -79,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: Colors.pink),
-            label: 'Cá nhân',
+            label: 'Hồ sơ',
           ),
         ],
       ),
@@ -87,158 +180,128 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeContent extends StatelessWidget {
-  const HomeContent();
+class HomeContent extends StatefulWidget {
+  const HomeContent({super.key});
+
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  final CardSwiperController controller = CardSwiperController();
+
+  final List<Candidate> candidates = [
+    Candidate(
+      name: 'Mai Lan',
+      age: '23',
+      bio: 'Thích nghệ thuật, du lịch',
+      avatar: 'assets/images/avatar1.png',
+    ),
+    Candidate(
+      name: 'Hoàng Nam',
+      age: '25',
+      bio: 'Yêu thể thao, công nghệ',
+      avatar: 'assets/images/avatar2.png',
+    ),
+    Candidate(
+      name: 'Minh Anh',
+      age: '22',
+      bio: 'Đọc sách, xem phim',
+      avatar: 'assets/images/avatar3.png',
+    ),
+  ];
+
+  late final List<Widget> cards;
+
+  @override
+  void initState() {
+    super.initState();
+    cards = candidates.map((c) => CandidateCard(c, controller)).toList();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  bool _onSwipe(
+    int previousIndex,
+    int? currentIndex,
+    CardSwiperDirection direction,
+  ) {
+    debugPrint(
+      'The card $previousIndex was swiped to the ${direction.name}. Now the card $currentIndex is on top',
+    );
+    return true;
+  }
+
+  bool _onUndo(
+    int? previousIndex,
+    int currentIndex,
+    CardSwiperDirection direction,
+  ) {
+    debugPrint('The card $currentIndex was undod from the ${direction.name}');
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.pink.shade50,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const Icon(Icons.favorite, color: Colors.pink, size: 64),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Chào mừng bạn đến với App Hẹn Hò!',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Kết nối, trò chuyện và tìm kiếm người phù hợp ngay hôm nay!',
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pinkAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    icon: const Icon(Icons.explore),
-                    label: const Text('Khám phá ngay'),
-                    onPressed: () {
-                      // Chuyển sang tab Khám phá
-                    },
-                  ),
-                ],
-              ),
+    return SafeArea(
+      child: Column(
+        children: [
+          Flexible(
+            child: CardSwiper(
+              controller: controller,
+              cardsCount: cards.length,
+              onSwipe: _onSwipe,
+              onUndo: _onUndo,
+              numberOfCardsDisplayed: 3,
+              backCardOffset: const Offset(40, 40),
+              padding: const EdgeInsets.all(24.0),
+              cardBuilder:
+                  (
+                    context,
+                    index,
+                    horizontalThresholdPercentage,
+                    verticalThresholdPercentage,
+                  ) => cards[index],
             ),
-            const SizedBox(height: 32),
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.pink.shade100,
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.pink,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Bạn đã hoàn thiện hồ sơ cá nhân chưa?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Hãy cập nhật thông tin để tăng cơ hội kết nối!',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.pinkAccent),
-                      onPressed: () {
-                        // Chuyển sang màn hình chỉnh sửa hồ sơ
-                      },
-                    ),
-                  ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                FloatingActionButton(
+                  onPressed: controller.undo,
+                  child: const Icon(Icons.rotate_left),
+                  backgroundColor: Colors.grey.shade300,
                 ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              alignment: Alignment.centerLeft,
-              child: const Text(
-                'Gợi ý kết nối',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.pinkAccent,
+                FloatingActionButton(
+                  onPressed: () => controller.swipe(CardSwiperDirection.left),
+                  child: const Icon(Icons.keyboard_arrow_left),
+                  backgroundColor: Colors.grey.shade300,
                 ),
-              ),
+                FloatingActionButton(
+                  onPressed: () => controller.swipe(CardSwiperDirection.right),
+                  child: const Icon(Icons.keyboard_arrow_right),
+                  backgroundColor: Colors.pinkAccent,
+                ),
+                FloatingActionButton(
+                  onPressed: () => controller.swipe(CardSwiperDirection.top),
+                  child: const Icon(Icons.keyboard_arrow_up),
+                  backgroundColor: Colors.grey.shade300,
+                ),
+                FloatingActionButton(
+                  onPressed: () => controller.swipe(CardSwiperDirection.bottom),
+                  child: const Icon(Icons.keyboard_arrow_down),
+                  backgroundColor: Colors.grey.shade300,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 120,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: 5,
-                separatorBuilder: (context, index) => const SizedBox(width: 16),
-                itemBuilder: (context, index) {
-                  return Container(
-                    width: 90,
-                    decoration: BoxDecoration(
-                      color: Colors.pink.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.pink.shade100,
-                          child: const Icon(Icons.person, color: Colors.pink),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'User',
-                          style: TextStyle(fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
