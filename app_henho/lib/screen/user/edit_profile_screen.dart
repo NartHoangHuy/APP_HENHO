@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../service/auth_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -10,17 +12,13 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController(text: 'Nguyễn Văn A');
-  int _age = 25;
-  final _locationController = TextEditingController(text: 'Hà Nội');
-  final _bioController = TextEditingController(
-    text: 'Tôi thích du lịch, đọc sách và gặp gỡ bạn mới.',
-  );
-
+  final _nameController = TextEditingController();
+  int _age = 0;
+  final _locationController = TextEditingController();
+  final _bioController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   List<XFile?> _images = List<XFile?>.filled(6, null, growable: false);
 
-  // Danh sách sở thích mẫu
   final List<String> hobbies = [
     'Nghệ thuật',
     'Bơi lội',
@@ -34,7 +32,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     'Công nghệ',
   ];
 
-  // Sở thích đã chọn
   final Set<String> selectedHobbies = {};
 
   Future<void> _pickImage(int index) async {
@@ -53,6 +50,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   int get imageCount => _images.where((img) => img != null).length;
+
+  Future<void> _saveProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    print('Token: $token');
+    final data = {
+      'username': _nameController.text,
+      'bio': _bioController.text,
+      'location': _locationController.text,
+      'age': _age,
+      'hobbies': selectedHobbies.join(', '),
+    };
+    print('Data gửi lên: $data');
+    if (token != null) {
+      final success = await AuthService().updateProfile(token, data);
+      print('Kết quả lưu: $success');
+    }
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             onPressed: () {
                               setState(() {
-                                if (_age > 1) _age--;
+                                if (_age > 0) _age--;
                               });
                             },
                           ),
@@ -288,12 +304,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  onPressed: imageCount < 2
-                      ? null
-                      : () {
-                          // Xử lý lưu thông tin chỉnh sửa
-                          Navigator.pop(context);
-                        },
+                  onPressed: imageCount < 2 ? null : _saveProfile,
                   child: const Text('Lưu thay đổi'),
                 ),
               ),

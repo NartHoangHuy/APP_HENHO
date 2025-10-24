@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'user/home_screen.dart';
-import 'admin/admin_dashboard_screen.dart';
+//import 'admin/admin_dashboard_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../service/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,20 +18,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Dữ liệu ảo: email và password hợp lệ
-  final String _fakeEmail = 'test@email.com';
-  final String _fakePassword = '123456';
+  String _errorMessage = '';
 
-  // Dữ liệu ảo: admin
-  final String _adminEmail = 'admin@email.com';
-  final String _adminPassword = 'admin123';
-
-  void _login() async {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      if (_emailController.text == _fakeEmail &&
-          _passwordController.text == _fakePassword) {
+      final authService = AuthService();
+      final token = await authService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+      if (token != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('token', token);
         await prefs.setString('role', 'user');
         Navigator.pushReplacement(
           context,
@@ -38,16 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (context) => const HomeScreen(showLoginSuccess: true),
           ),
         );
-      } else if (_emailController.text == _adminEmail &&
-          _passwordController.text == _adminPassword) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('role', 'admin');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-        );
       } else {
+        setState(() {
+          _errorMessage = 'Email hoặc mật khẩu không đúng';
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Email hoặc mật khẩu không đúng')),
         );
@@ -69,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 60),
                 const Text(
-                  'Chào mừng bạn đến với App Hẹn Hò!',
+                  'HeartBeat',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
@@ -145,6 +139,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: const Text('Chưa có tài khoản? Đăng ký'),
                 ),
+                if (_errorMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _errorMessage,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
               ],
             ),
           ),
