@@ -121,12 +121,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               childAspectRatio: 0.8,
             ),
             itemBuilder: (context, index) {
+              // Danh sách ảnh profile
+              final List<String> images = [
+                'assets/images/12.jpg',
+                'assets/images/profile1.jpg',
+                'assets/images/13.jpg',
+                'assets/images/12.jpg',
+                'assets/images/profile1.jpg',
+                'assets/images/14.jpg',
+              ];
+
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade50,
                   borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(
+                    image: AssetImage(images[index]),
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                child: const Icon(Icons.person, color: Colors.pink, size: 48),
               );
             },
           ),

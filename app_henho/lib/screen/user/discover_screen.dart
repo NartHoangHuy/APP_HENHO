@@ -1,208 +1,141 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 
-class Candidate {
-  final String name;
-  final String age;
-  final String bio;
-  final String avatar;
+class DiscoverScreen extends StatelessWidget {
+  DiscoverScreen({super.key});
 
-  Candidate({
-    required this.name,
-    required this.age,
-    required this.bio,
-    required this.avatar,
-  });
-}
+  // Danh sách sở thích
+  final List<Map<String, dynamic>> interests = [
+    {
+      'title': 'Không ràng buộc',
+      'icon': Icons.favorite_border,
+      'color': Colors.pink[50],
+    },
+    {
+      'title': 'Người yêu',
+      'icon': Icons.favorite,
+      'color': Colors.red.shade100,
+    },
+    {
+      'title': 'Hẹn hò nghiêm túc',
+      'icon': Icons.handshake,
+      'color': Colors.purple.shade100,
+    },
+    {
+      'title': 'Rảnh tối nay',
+      'icon': Icons.nightlight,
+      'color': Colors.blue.shade100,
+    },
+    {
+      'title': 'Bạn trò chuyện',
+      'icon': Icons.chat_bubble_outline,
+      'color': Colors.green.shade100,
+    },
+    {
+      'title': 'Tìm bạn cùng sở thích',
+      'icon': Icons.group,
+      'color': Colors.orange.shade100,
+    },
+    {
+      'title': 'Kết bạn bốn phương',
+      'icon': Icons.public,
+      'color': Colors.teal.shade100,
+    },
+  ];
 
-class CandidateCard extends StatelessWidget {
-  final Candidate candidate;
-  final CardSwiperController controller;
-  const CandidateCard(this.candidate, this.controller, {super.key});
+  Widget _tile(
+    BuildContext context,
+    Map<String, dynamic> interest, {
+    double height = 120,
+  }) {
+    final Color bg = (interest['color'] as Color?) ?? Colors.white;
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã chọn: ${interest['title']}')),
+        );
+      },
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.pinkAccent, width: 1),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(interest['icon'], color: Colors.pinkAccent, size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                interest['title'],
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.pinkAccent,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 24),
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.pink.shade100,
-            backgroundImage: AssetImage(candidate.avatar),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '${candidate.name}, ${candidate.age}',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            candidate.bio,
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const Spacer(),
+    // Tạo danh sách widget theo pattern: ô 1 full-width, ô 2+3 trên 1 hàng (dài + ngắn),
+    // ô 4 full-width, ô 5+6 trên 1 hàng, ...
+    final List<Widget> tiles = [];
+    int i = 0;
+    while (i < interests.length) {
+      if (i % 3 == 0) {
+        // full-width single
+        tiles.add(_tile(context, interests[i], height: 120));
+        i += 1;
+      } else {
+        // pair on one row: left long (flex 2), right short (flex 1)
+        final left = interests[i];
+        final right = (i + 1 < interests.length) ? interests[i + 1] : null;
+        tiles.add(
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade300,
-                  foregroundColor: Colors.pinkAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                icon: const Icon(Icons.close),
-                label: const Text('Bỏ qua'),
-                onPressed: () {
-                  controller.swipe(CardSwiperDirection.left);
-                },
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                icon: const Icon(Icons.favorite),
-                label: const Text('Kết nối'),
-                onPressed: () {
-                  controller.swipe(CardSwiperDirection.right);
-                },
+              Expanded(flex: 2, child: _tile(context, left, height: 120)),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: right != null
+                    ? _tile(context, right, height: 120)
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
+        );
+        i += 2;
+      }
+      // khoảng cách giữa các hàng
+      tiles.add(const SizedBox(height: 12));
+    }
 
-class DiscoverScreen extends StatefulWidget {
-  const DiscoverScreen({super.key});
-
-  @override
-  State<DiscoverScreen> createState() => _DiscoverScreenState();
-}
-
-class _DiscoverScreenState extends State<DiscoverScreen> {
-  final CardSwiperController controller = CardSwiperController();
-
-  final List<Candidate> candidates = [
-    Candidate(
-      name: 'Mai Lan',
-      age: '23',
-      bio: 'Thích nghệ thuật, du lịch',
-      avatar: 'assets/images/avatar1.png',
-    ),
-    Candidate(
-      name: 'Hoàng Nam',
-      age: '25',
-      bio: 'Yêu thể thao, công nghệ',
-      avatar: 'assets/images/avatar2.png',
-    ),
-    Candidate(
-      name: 'Minh Anh',
-      age: '22',
-      bio: 'Đọc sách, xem phim',
-      avatar: 'assets/images/avatar3.png',
-    ),
-  ];
-
-  late final List<Widget> cards;
-
-  @override
-  void initState() {
-    super.initState();
-    cards = candidates.map((c) => CandidateCard(c, controller)).toList();
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        children: [
-          Flexible(
-            child: CardSwiper(
-              controller: controller,
-              cardsCount: cards.length,
-              onSwipe: _onSwipe,
-              onUndo: _onUndo,
-              numberOfCardsDisplayed: 3,
-              backCardOffset: const Offset(40, 40),
-              padding: const EdgeInsets.all(24.0),
-              cardBuilder:
-                  (
-                    context,
-                    index,
-                    horizontalThresholdPercentage,
-                    verticalThresholdPercentage,
-                  ) => cards[index],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Khám phá theo sở thích',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.pinkAccent,
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                FloatingActionButton(
-                  onPressed: controller.undo,
-                  child: const Icon(Icons.rotate_left),
-                ),
-                FloatingActionButton(
-                  onPressed: () => controller.swipe(CardSwiperDirection.left),
-                  child: const Icon(Icons.keyboard_arrow_left),
-                ),
-                FloatingActionButton(
-                  onPressed: () => controller.swipe(CardSwiperDirection.right),
-                  child: const Icon(Icons.keyboard_arrow_right),
-                ),
-                FloatingActionButton(
-                  onPressed: () => controller.swipe(CardSwiperDirection.top),
-                  child: const Icon(Icons.keyboard_arrow_up),
-                ),
-                FloatingActionButton(
-                  onPressed: () => controller.swipe(CardSwiperDirection.bottom),
-                  child: const Icon(Icons.keyboard_arrow_down),
-                ),
-              ],
-            ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Expanded(child: ListView(children: tiles)),
+          ],
+        ),
       ),
     );
-  }
-
-  bool _onSwipe(
-    int previousIndex,
-    int? currentIndex,
-    CardSwiperDirection direction,
-  ) {
-    debugPrint(
-      'The card $previousIndex was swiped to the ${direction.name}. Now the card $currentIndex is on top',
-    );
-    return true;
-  }
-
-  bool _onUndo(
-    int? previousIndex,
-    int currentIndex,
-    CardSwiperDirection direction,
-  ) {
-    debugPrint('The card $currentIndex was undod from the ${direction.name}');
-    return true;
   }
 }
