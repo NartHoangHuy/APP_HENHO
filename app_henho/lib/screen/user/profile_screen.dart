@@ -2,15 +2,40 @@ import 'package:flutter/material.dart';
 import 'edit_profile_screen.dart';
 import '../login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../service/auth_service.dart';
+import '../../model/user_profile.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  UserProfile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token != null) {
+      final profile = await AuthService().getProfile(token);
+      setState(() {
+        _profile = profile;
+      });
+    }
+  }
+
   void _logout(BuildContext context) async {
-    // Xóa trạng thái đăng nhập
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
-
+    await prefs.remove('token');
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -20,20 +45,38 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Nếu không có dữ liệu thì hiển thị thông tin rỗng
+    final name = _profile?.username ?? '';
+    final info = _profile != null
+        ? '${_profile!.birthday ?? ''}, ${_profile!.gender ?? ''}'
+        : '';
+    final email = _profile?.email ?? '';
+    final bio = _profile?.bio ?? '';
+    final location = _profile?.location ?? '';
+    final age = _profile?.age?.toString() ?? '';
+    final hobbies = _profile?.hobbies ?? '';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 16),
-          const Text(
-            'Nguyễn Văn A',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '25 tuổi, Hà Nội',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+          Text(info, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text(
+            location,
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            age.isNotEmpty ? '$age tuổi' : '',
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 24),
           Card(
@@ -44,19 +87,23 @@ class ProfileScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                children: const [
+                children: [
                   ListTile(
-                    leading: Icon(Icons.email, color: Colors.pink),
-                    title: Text('Email'),
-                    subtitle: Text('test@email.com'),
+                    leading: const Icon(Icons.email, color: Colors.pink),
+                    title: const Text('Email'),
+                    subtitle: Text(email),
                   ),
-                  Divider(),
+                  const Divider(),
                   ListTile(
-                    leading: Icon(Icons.info, color: Colors.pink),
-                    title: Text('Giới thiệu'),
-                    subtitle: Text(
-                      'Tôi thích du lịch, đọc sách và gặp gỡ bạn mới.',
-                    ),
+                    leading: const Icon(Icons.info, color: Colors.pink),
+                    title: const Text('Giới thiệu'),
+                    subtitle: Text(bio),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.favorite, color: Colors.pink),
+                    title: const Text('Sở thích'),
+                    subtitle: Text(hobbies),
                   ),
                 ],
               ),
@@ -97,13 +144,14 @@ class ProfileScreen extends StatelessWidget {
               ),
               icon: const Icon(Icons.edit),
               label: const Text('Chỉnh sửa hồ sơ'),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const EditProfileScreen(),
                   ),
                 );
+                _loadProfile(); // Reload dữ liệu sau khi chỉnh sửa
               },
             ),
           ),

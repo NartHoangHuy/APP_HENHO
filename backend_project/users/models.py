@@ -12,3 +12,10 @@ class UserProfile(AbstractUser):
         blank=True,
         null=True
     )
+    location = models.CharField(max_length=100, blank=True, null=True)
+    age = models.IntegerField(blank=True, null=True)
+    # Lưu dạng chuỗi, ví dụ: "Bơi lội, Đọc sách"
+    hobbies = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.username

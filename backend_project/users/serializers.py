@@ -5,7 +5,23 @@ from .models import UserProfile
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = '__all__'
+        fields = (
+            'id', 'username', 'email', 'avatar', 'bio', 'birthday', 'gender',
+            'location', 'age', 'hobbies'
+        )
+
+
+class EditProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = (
+            'avatar', 'bio', 'birthday', 'gender', 'username', 'email',
+            'location', 'age', 'hobbies'
+        )
+        extra_kwargs = {
+            'username': {'required': False},
+            'email': {'required': False},
+        }
 
 
 class RegisterSerializer(serializers.ModelSerializer):
