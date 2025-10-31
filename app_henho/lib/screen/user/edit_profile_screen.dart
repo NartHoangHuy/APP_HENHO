@@ -25,6 +25,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   List<XFile?> _images = List<XFile?>.filled(6, null, growable: false);
   String? _existingAvatarUrl; // Lưu avatar URL từ server
+  List<String> _existingPhotosUrls = []; // Lưu photos URLs từ server
 
   // Location services
   final LocationService _locationService = LocationService();
@@ -92,9 +93,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             }
 
             // Load avatar URL từ server
+            print(
+              '🔍 Profile data: avatar=${profile.avatar}, avatarUrl=${profile.avatarUrl}',
+            );
+            print(
+              '🔍 Photos data: photos=${profile.photos}, photosUrls=${profile.photosUrls}',
+            );
+
             if (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty) {
               _existingAvatarUrl = profile.avatarUrl;
               print('🖼️ Loaded existing avatar: $_existingAvatarUrl');
+            } else {
+              print('⚠️ No avatar URL found in profile');
+            }
+
+            // Load additional photos URLs từ server
+            if (profile.photosUrls != null && profile.photosUrls!.isNotEmpty) {
+              _existingPhotosUrls = profile.photosUrls!;
+              print('📸 Loaded ${_existingPhotosUrls.length} existing photos');
+              for (int i = 0; i < _existingPhotosUrls.length; i++) {
+                print('  Photo ${i + 1}: ${_existingPhotosUrls[i]}');
+              }
+            } else {
+              print('⚠️ No photos URLs found in profile');
             }
           });
         }
@@ -341,6 +362,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       print('📦 Data gửi lên: $data');
 
+      // Count total images (existing + new)
+      int totalImages = 0;
+
+      // Count avatar
+      if (_images[0] != null) {
+        totalImages++; // New avatar
+      } else if (_existingAvatarUrl != null && _existingAvatarUrl!.isNotEmpty) {
+        totalImages++; // Existing avatar
+      }
+
+      // Count photos
+      int newPhotoCount = 0;
+      for (int i = 1; i < _images.length; i++) {
+        if (_images[i] != null) {
+          newPhotoCount++;
+        }
+      }
+      totalImages += newPhotoCount > 0
+          ? newPhotoCount
+          : _existingPhotosUrls.length;
+
+      // Validate: Require at least 2 images
+      if (totalImages < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '⚠️ Cần tối thiểu 2 ảnh (1 ảnh đại diện + 1 ảnh phụ)',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       // Lấy đường dẫn ảnh đầu tiên (nếu có)
       String? avatarPath;
       if (_images.isNotEmpty && _images[0] != null) {
@@ -348,13 +404,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         print('📷 Avatar path: $avatarPath');
       }
 
+      // Lấy đường dẫn các ảnh phụ (từ index 1-5)
+      List<String> photoPaths = [];
+      for (int i = 1; i < _images.length && i < 6; i++) {
+        if (_images[i] != null) {
+          photoPaths.add(_images[i]!.path);
+          print('📸 Photo ${i} path: ${_images[i]!.path}');
+        }
+      }
+
+      print(
+        '📊 Total images: $totalImages (Avatar: ${avatarPath != null || _existingAvatarUrl != null ? '✅' : '❌'}, Photos: ${photoPaths.length + _existingPhotosUrls.length})',
+      );
+
       if (token != null) {
         // Dùng updateProfileWithAvatar nếu có ảnh, không thì dùng updateProfile thường
-        final success = avatarPath != null
+        final success = (avatarPath != null || photoPaths.isNotEmpty)
             ? await AuthService().updateProfileWithAvatar(
                 token,
                 data,
                 avatarPath,
+                photoPaths: photoPaths.isNotEmpty ? photoPaths : null,
               )
             : await AuthService().updateProfile(token, data);
 
@@ -573,13 +643,52 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildImageCard(XFile? img, int index) {
     // Hiển thị ảnh từ server cho ô đầu tiên nếu chưa có ảnh local
     final hasExistingAvatar =
-        index == 0 && img == null && _existingAvatarUrl != null;
+        index == 0 &&
+        img == null &&
+        _existingAvatarUrl != null &&
+        _existingAvatarUrl!.isNotEmpty;
+    // Hiển thị ảnh phụ từ server cho các ô còn lại (index 1-5)
+    final hasExistingPhoto =
+        index > 0 &&
+        img == null &&
+        _existingPhotosUrls.isNotEmpty &&
+        (index - 1) < _existingPhotosUrls.length &&
+        _existingPhotosUrls[index - 1].isNotEmpty;
+    final existingPhotoUrl = hasExistingPhoto
+        ? _existingPhotosUrls[index - 1]
+        : null;
+
+    // Debug log CHI TIẾT
+    if (index == 0 && _existingAvatarUrl != null) {
+      print(
+        '🎨 Card $index: hasExistingAvatar=$hasExistingAvatar, url=$_existingAvatarUrl',
+      );
+    }
+    if (index > 0 && _existingPhotosUrls.isNotEmpty) {
+      print('🎨 Card $index DEBUG:');
+      print('   img == null: ${img == null}');
+      print(
+        '   _existingPhotosUrls.isNotEmpty: ${_existingPhotosUrls.isNotEmpty}',
+      );
+      print(
+        '   (index - 1) < _existingPhotosUrls.length: ${(index - 1) < _existingPhotosUrls.length}',
+      );
+      if ((index - 1) < _existingPhotosUrls.length) {
+        print(
+          '   _existingPhotosUrls[${index - 1}]: "${_existingPhotosUrls[index - 1]}"',
+        );
+        print('   .isNotEmpty: ${_existingPhotosUrls[index - 1].isNotEmpty}');
+      }
+      print(
+        '   → hasExistingPhoto=$hasExistingPhoto, url=$existingPhotoUrl, totalPhotos=${_existingPhotosUrls.length}',
+      );
+    }
 
     return GestureDetector(
       onTap: () => _pickImage(index),
       child: Container(
         decoration: BoxDecoration(
-          gradient: (img == null && !hasExistingAvatar)
+          gradient: (img == null && !hasExistingAvatar && !hasExistingPhoto)
               ? LinearGradient(
                   colors: [
                     AppColors.primary.withOpacity(0.1),
@@ -589,18 +698,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               : null,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: (img == null && !hasExistingAvatar)
+            color: (img == null && !hasExistingAvatar && !hasExistingPhoto)
                 ? AppColors.primary.withOpacity(0.3)
                 : AppColors.primary,
-            width: (img == null && !hasExistingAvatar) ? 1 : 2,
+            width: (img == null && !hasExistingAvatar && !hasExistingPhoto)
+                ? 1
+                : 2,
           ),
-          boxShadow: (img != null || hasExistingAvatar)
+          boxShadow: (img != null || hasExistingAvatar || hasExistingPhoto)
               ? AppShadows.small
               : null,
         ),
         child: Stack(
           children: [
-            if (img == null && !hasExistingAvatar)
+            if (img == null && !hasExistingAvatar && !hasExistingPhoto)
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -660,9 +771,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     );
                   },
                 ),
+              )
+            else if (hasExistingPhoto && existingPhotoUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Image.network(
+                  existingPhotoUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: AppColors.error,
+                        size: AppIconSize.lg,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                ),
               ),
 
-            if (img != null || hasExistingAvatar)
+            if (img != null || hasExistingAvatar || hasExistingPhoto)
               Positioned(
                 top: 4,
                 right: 4,

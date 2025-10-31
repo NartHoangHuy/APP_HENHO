@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import '../model/candidate.dart';
 import '../config/app_theme.dart';
+import '../screen/user/candidate_detail_screen.dart';
 
 // Widget hiển thị thẻ profile của một ứng viên trong tính năng swipe
 // Thiết kế hiện đại với gradient, shadow đẹp, và layout hấp dẫn
@@ -57,27 +58,40 @@ class CandidateCard extends StatelessWidget {
                 children: [
                   const SizedBox(height: AppSpacing.lg),
 
-                  // Avatar với gradient border
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.primaryGradient,
-                      boxShadow: AppShadows.medium,
-                    ),
-                    child: CircleAvatar(
-                      radius: 70,
-                      backgroundColor: AppColors.surface,
-                      backgroundImage: candidate.avatar.isNotEmpty
-                          ? NetworkImage(candidate.avatar)
-                          : null,
-                      child: candidate.avatar.isEmpty
-                          ? Icon(
-                              Icons.person,
-                              size: AppIconSize.xl * 1.5,
-                              color: AppColors.textSecondary,
-                            )
-                          : null,
+                  // Avatar với gradient border - tap để xem detail
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CandidateDetailScreen(
+                            candidate: candidate,
+                            controller: controller,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.primaryGradient,
+                        boxShadow: AppShadows.medium,
+                      ),
+                      child: CircleAvatar(
+                        radius: 70,
+                        backgroundColor: AppColors.surface,
+                        backgroundImage: candidate.avatar.isNotEmpty
+                            ? NetworkImage(candidate.avatar)
+                            : null,
+                        child: candidate.avatar.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                size: AppIconSize.xl * 1.5,
+                                color: AppColors.textSecondary,
+                              )
+                            : null,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),

@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterAPIView, LoginAPIView, ProfileAPIView, GoogleSignInAPIView,
-    DiscoverViewSet, LikeViewSet, MatchViewSet,
+    UpdateInterestsAPIView, DiscoverViewSet, LikeViewSet, MatchViewSet,
     CityListAPIView, HobbyListAPIView
 )
 
@@ -18,6 +18,7 @@ urlpatterns = [
     path('login/', LoginAPIView.as_view(), name='login'),
     path('google-signin/', GoogleSignInAPIView.as_view(), name='google_signin'),
     path('profile/', ProfileAPIView.as_view(), name='profile'),
+    path('interests/', UpdateInterestsAPIView.as_view(), name='update_interests'),
 
     # Master data endpoints
     path('cities/', CityListAPIView.as_view(), name='cities'),

@@ -63,14 +63,126 @@ class ProfileAPIView(APIView):
         print(f"📦 Received data: {request.data}")
         print(f"📋 Content-Type: {request.content_type}")
 
+        # Handle multiple photo uploads (photo_1, photo_2, ..., photo_5)
+        photo_files = []
+        for i in range(1, 6):  # photo_1 to photo_5
+            photo_key = f'photo_{i}'
+            if photo_key in request.FILES:
+                photo_files.append(request.FILES[photo_key])
+
+        # Save photos and get paths
+        saved_photo_paths = []
+        if photo_files:
+            import os
+            from django.core.files.storage import default_storage
+
+            for photo in photo_files:
+                # Save to media/photos/
+                file_path = default_storage.save(f'photos/{photo.name}', photo)
+                saved_photo_paths.append(file_path)
+                print(f"📸 Saved photo: {file_path}")
+
+        # Check avatar requirement: Must have avatar (from FILES or existing)
+        has_avatar = 'avatar' in request.FILES or request.user.avatar
+        has_new_photos = len(saved_photo_paths) > 0
+
+        # Count total images (avatar + photos)
+        total_images = 0
+        if has_avatar:
+            total_images += 1
+        if has_new_photos:
+            total_images += len(saved_photo_paths)
+        elif request.user.photos:
+            total_images += len(request.user.photos)
+
+        # Validation: Require at least 2 images (avatar + 1 photo minimum)
+        if total_images < 2:
+            return Response(
+                {'error': 'Cần tối thiểu 2 ảnh (1 ảnh đại diện + 1 ảnh phụ)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Convert QueryDict to regular dict to avoid immutability issues
+        data = {}
+        for key in request.data.keys():
+            if key not in ['avatar', 'photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5']:
+                data[key] = request.data[key]
+
+        # Add photos to data if any were uploaded
+        if saved_photo_paths:
+            # Replace existing photos with new ones (not merge)
+            data['photos'] = saved_photo_paths
+            print(f"📷 Total photos uploaded: {len(saved_photo_paths)}")
+
         serializer = EditProfileSerializer(
-            request.user, data=request.data, partial=True)
+            request.user, data=data, partial=True)
         if serializer.is_valid():
             user = serializer.save()
+
+            # Handle avatar separately after save
+            if 'avatar' in request.FILES:
+                user.avatar = request.FILES['avatar']
+                user.save()
+                print(f"📷 Avatar saved: {user.avatar.name}")
+
             print(f"✅ Profile updated: {user.username}")
             return Response({'message': 'Cập nhật thành công!', 'user': UserProfileSerializer(user, context={'request': request}).data})
         print(f"❌ Validation errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateInterestsAPIView(APIView):
+    """API endpoint to update user's interested_in array"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        interest = request.data.get('interest')
+        if not interest:
+            return Response(
+                {'error': 'Interest field is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        # Initialize interested_in if it's None
+        if user.interested_in is None:
+            user.interested_in = []
+
+        # Add interest if not already present
+        if interest not in user.interested_in:
+            user.interested_in.append(interest)
+            user.save()
+            print(f"✅ Added interest '{interest}' to user {user.username}")
+        else:
+            print(
+                f"ℹ️ Interest '{interest}' already exists for user {user.username}")
+
+        return Response({
+            'message': 'Interest added successfully',
+            'interested_in': user.interested_in
+        })
+
+    def delete(self, request):
+        """Remove an interest from user's list"""
+        interest = request.data.get('interest')
+        if not interest:
+            return Response(
+                {'error': 'Interest field is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        if user.interested_in and interest in user.interested_in:
+            user.interested_in.remove(interest)
+            user.save()
+            print(f"✅ Removed interest '{interest}' from user {user.username}")
+
+        return Response({
+            'message': 'Interest removed successfully',
+            'interested_in': user.interested_in or []
+        })
 
 
 class GoogleSignInAPIView(APIView):
@@ -114,6 +226,32 @@ class DiscoverViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = UserProfile.objects.exclude(id=user.id)
+
+        # 🎯 MODE: "Kết bạn bốn phương" - trộn tất cả (bỏ qua filters)
+        mode = self.request.query_params.get('mode')
+        if mode == 'all':
+            # Chỉ loại trừ người đã like và match, không lọc theo gender/age/hobby
+            liked_ids = Like.objects.filter(
+                from_user=user).values_list('to_user_id', flat=True)
+            queryset = queryset.exclude(id__in=liked_ids)
+
+            matched_user1_ids = Match.objects.filter(
+                user1=user).values_list('user2_id', flat=True)
+            matched_user2_ids = Match.objects.filter(
+                user2=user).values_list('user1_id', flat=True)
+            queryset = queryset.exclude(
+                Q(id__in=matched_user1_ids) | Q(id__in=matched_user2_ids))
+
+            return queryset.order_by('?')  # Random order
+
+        # 🔍 FILTER: Theo sở thích cụ thể
+        hobby = self.request.query_params.get('hobby')
+        if hobby:
+            # Tìm users có hobby trong interested_in array hoặc hobbies text
+            queryset = queryset.filter(
+                Q(interested_in__contains=[hobby]) | Q(
+                    hobbies__icontains=hobby)
+            )
 
         # Lọc theo giới tính
         gender = self.request.query_params.get('gender')
