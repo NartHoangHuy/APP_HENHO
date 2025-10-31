@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../model/match.dart';
-import '../../service/match_service.dart';
 import '../../widgets/match_card.dart';
+import '../../providers/match_provider.dart';
 import 'chat_detail_screen.dart';
 
 // Màn hình hiển thị danh sách match và chat
@@ -14,46 +14,22 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final MatchService _matchService = MatchService();
-  List<Match> _matches = [];
-  bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadMatches();
+    // Load matches when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MatchProvider>().loadMatches();
+    });
   }
 
-  // Tải danh sách matches từ API
-  Future<void> _loadMatches() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token != null) {
-        final matches = await _matchService.getMatchesList(token);
-
-        // Sắp xếp: tin nhắn chưa đọc lên trước, sau đó theo thời gian
-        matches.sort((a, b) {
-          if (a.hasUnreadMessages && !b.hasUnreadMessages) return -1;
-          if (!a.hasUnreadMessages && b.hasUnreadMessages) return 1;
-
-          final timeA = a.lastMessageTime ?? a.matchedAt;
-          final timeB = b.lastMessageTime ?? b.matchedAt;
-          return timeB.compareTo(timeA);
-        });
-
-        setState(() {
-          _matches = matches;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading matches: $e');
-      setState(() => _isLoading = false);
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   // Mở màn hình chat chi tiết
@@ -63,12 +39,47 @@ class _ChatScreenState extends State<ChatScreen> {
       MaterialPageRoute(builder: (context) => ChatDetailScreen(match: match)),
     );
     // Reload sau khi quay lại để cập nhật trạng thái đã đọc
-    _loadMatches();
+    if (mounted) {
+      context.read<MatchProvider>().refresh();
+    }
+  }
+
+  // Lọc matches theo search query
+  List<Match> _filterMatches(List<Match> matches) {
+    if (_searchQuery.isEmpty) {
+      return matches;
+    }
+
+    final query = _searchQuery.toLowerCase();
+    return matches.where((match) {
+      final name = match.name.toLowerCase();
+      final lastMessage = match.lastMessage?.toLowerCase() ?? '';
+      return name.contains(query) || lastMessage.contains(query);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    // Watch MatchProvider
+    final matchProvider = context.watch<MatchProvider>();
+    final matches = matchProvider.matches;
+    final isLoading = matchProvider.isLoading;
+
+    // Filter matches by search query
+    final filteredMatches = _filterMatches(matches);
+
+    // Sort matches: unread messages first, then by time
+    final sortedMatches = List<Match>.from(filteredMatches);
+    sortedMatches.sort((a, b) {
+      if (a.hasUnreadMessages && !b.hasUnreadMessages) return -1;
+      if (!a.hasUnreadMessages && b.hasUnreadMessages) return 1;
+
+      final timeA = a.lastMessageTime ?? a.matchedAt;
+      final timeB = b.lastMessageTime ?? b.matchedAt;
+      return timeB.compareTo(timeA);
+    });
+
+    if (isLoading && matches.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -86,7 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadMatches,
+        onRefresh: () => matchProvider.refresh(),
         color: Colors.pink.shade400,
         child: Column(
           children: [
@@ -103,34 +114,70 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ],
               ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm cuộc trò chuyện...',
-                  hintStyle: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade500,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm tên hoặc tin nhắn...',
+                      hintStyle: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade500,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade600,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade600,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
                   ),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-                onChanged: (value) {
-                  // TODO: Implement search functionality
-                },
+
+                  // Hiển thị số kết quả tìm kiếm
+                  if (_searchQuery.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tìm thấy ${sortedMatches.length} kết quả',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
 
             // Danh sách matches
             Expanded(
-              child: _matches.isEmpty
+              child: sortedMatches.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32.0),
@@ -149,15 +196,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.chat_bubble_outline,
+                                _searchQuery.isNotEmpty
+                                    ? Icons.search_off
+                                    : Icons.chat_bubble_outline,
                                 size: 64,
                                 color: Colors.grey.shade400,
                               ),
                             ),
                             const SizedBox(height: 24),
-                            const Text(
-                              'Chưa có cuộc trò chuyện',
-                              style: TextStyle(
+                            Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'Không tìm thấy kết quả'
+                                  : 'Chưa có cuộc trò chuyện',
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
@@ -165,7 +216,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Khi bạn match với ai đó,\ncuộc trò chuyện sẽ xuất hiện ở đây',
+                              _searchQuery.isNotEmpty
+                                  ? 'Không có cuộc trò chuyện nào khớp với\n"$_searchQuery"'
+                                  : 'Khi bạn match với ai đó,\ncuộc trò chuyện sẽ xuất hiện ở đây',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,
@@ -179,7 +232,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _matches.length,
+                      itemCount: sortedMatches.length,
                       separatorBuilder: (context, index) => Divider(
                         height: 1,
                         indent: 80,
@@ -187,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         color: Colors.grey.shade200,
                       ),
                       itemBuilder: (context, index) {
-                        final match = _matches[index];
+                        final match = sortedMatches[index];
                         return MatchCard(
                           match: match,
                           onTap: () => _openChat(match),

@@ -21,14 +21,31 @@ class LikeService {
         },
       );
 
+      print('📋 LikeService: Response status: ${response.statusCode}');
+      print('📦 LikeService: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List results = data['results'] ?? [];
+
+        // Check if response is paginated or a list
+        final List results;
+        if (data is List) {
+          results = data;
+        } else if (data is Map && data.containsKey('results')) {
+          results = data['results'] ?? [];
+        } else {
+          print('⚠️ Unexpected response format');
+          return [];
+        }
+
+        print('✅ LikeService: Parsed ${results.length} likes');
         return results.map((json) => Like.fromJson(json)).toList();
       }
+
+      print('❌ LikeService: Failed with status ${response.statusCode}');
       return [];
     } catch (e) {
-      print('Error getting likes list: $e');
+      print('❌ LikeService: Error getting likes list: $e');
       return [];
     }
   }

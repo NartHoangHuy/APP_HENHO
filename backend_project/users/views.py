@@ -246,12 +246,27 @@ class DiscoverViewSet(viewsets.ReadOnlyModelViewSet):
 
         # 🔍 FILTER: Theo sở thích cụ thể
         hobby = self.request.query_params.get('hobby')
-        if hobby:
-            # Tìm users có hobby trong interested_in array hoặc hobbies text
-            queryset = queryset.filter(
-                Q(interested_in__contains=[hobby]) | Q(
-                    hobbies__icontains=hobby)
-            )
+        if hobby and hobby.strip():  # Check if hobby is not empty
+            print(f"🔍 Filtering by hobby: '{hobby}'")
+            # Chỉ lấy users có hobby trong interested_in array
+            queryset = queryset.filter(interested_in__contains=[hobby])
+            print(f"📊 Found {queryset.count()} users with hobby '{hobby}'")
+
+            # ❌ Loại bỏ người đã like và match (giống mode='all')
+            liked_ids = Like.objects.filter(
+                from_user=user).values_list('to_user_id', flat=True)
+            queryset = queryset.exclude(id__in=liked_ids)
+            print(f"   After excluding liked: {queryset.count()} users")
+
+            matched_user1_ids = Match.objects.filter(
+                user1=user).values_list('user2_id', flat=True)
+            matched_user2_ids = Match.objects.filter(
+                user2=user).values_list('user1_id', flat=True)
+            queryset = queryset.exclude(
+                Q(id__in=matched_user1_ids) | Q(id__in=matched_user2_ids))
+            print(f"   After excluding matched: {queryset.count()} users")
+
+            return queryset.order_by('?')  # Random order
 
         # Lọc theo giới tính
         gender = self.request.query_params.get('gender')
@@ -308,16 +323,18 @@ class DiscoverViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         if action == 'like':
-            # Tạo Like
-            like, created = Like.objects.get_or_create(
+            # Tạo hoặc update Like với is_like=True
+            like, created = Like.objects.update_or_create(
                 from_user=request.user,
-                to_user=target_user
+                to_user=target_user,
+                defaults={'is_like': True}
             )
 
-            # Kiểm tra xem người kia đã like mình chưa
+            # Kiểm tra xem người kia đã like mình chưa (is_like=True)
             reverse_like_exists = Like.objects.filter(
                 from_user=target_user,
-                to_user=request.user
+                to_user=request.user,
+                is_like=True
             ).exists()
 
             if reverse_like_exists:
@@ -341,11 +358,11 @@ class DiscoverViewSet(viewsets.ReadOnlyModelViewSet):
             }, status=status.HTTP_200_OK)
 
         elif action == 'dislike':
-            # Tạo Like với flag dislike (hoặc có thể tạo model riêng)
-            # Ở đây đơn giản chỉ tạo Like để đánh dấu đã xem
-            Like.objects.get_or_create(
+            # Tạo hoặc update Like với is_like=False (đánh dấu đã dislike)
+            Like.objects.update_or_create(
                 from_user=request.user,
-                to_user=target_user
+                to_user=target_user,
+                defaults={'is_like': False}
             )
             return Response({
                 'matched': False,
@@ -365,8 +382,11 @@ class LikeViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
 
     def get_queryset(self):
-        """Lấy danh sách người đã like mình"""
-        return Like.objects.filter(to_user=self.request.user).select_related('from_user')
+        """Lấy danh sách người đã like mình (chỉ lấy is_like=True)"""
+        return Like.objects.filter(
+            to_user=self.request.user,
+            is_like=True
+        ).select_related('from_user')
 
     @action(detail=False, methods=['post'])
     def like_back(self, request):
@@ -390,10 +410,11 @@ class LikeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Kiểm tra người kia đã like mình chưa
+        # Kiểm tra người kia đã like mình chưa (is_like=True)
         like_exists = Like.objects.filter(
             from_user=target_user,
-            to_user=request.user
+            to_user=request.user,
+            is_like=True
         ).exists()
 
         if not like_exists:
@@ -402,10 +423,11 @@ class LikeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Tạo like ngược lại
-        Like.objects.get_or_create(
+        # Tạo like ngược lại với is_like=True
+        Like.objects.update_or_create(
             from_user=request.user,
-            to_user=target_user
+            to_user=target_user,
+            defaults={'is_like': True}
         )
 
         # Tạo Match
@@ -414,6 +436,13 @@ class LikeViewSet(viewsets.ModelViewSet):
             user1=user1,
             user2=user2
         )
+
+        # 🔥 XÓA Like gốc sau khi match để không hiển thị lại trong "Lượt thích"
+        Like.objects.filter(
+            from_user=target_user,
+            to_user=request.user,
+            is_like=True
+        ).delete()
 
         return Response({
             'matched': True,

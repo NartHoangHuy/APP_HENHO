@@ -90,23 +90,31 @@ class DiscoverUserSerializer(serializers.ModelSerializer):
 
 
 class LikeSerializer(serializers.ModelSerializer):
-    """Serializer cho Like"""
+    """Serializer cho Like - bao gồm đầy đủ thông tin user để hiển thị detail"""
     from_user_name = serializers.CharField(
         source='from_user.username', read_only=True)
     from_user_age = serializers.IntegerField(
         source='from_user.age', read_only=True)
+    from_user_gender = serializers.CharField(
+        source='from_user.gender', read_only=True)
     from_user_avatar = serializers.SerializerMethodField()
     from_user_bio = serializers.CharField(
         source='from_user.bio', read_only=True)
     from_user_location = serializers.CharField(
         source='from_user.location', read_only=True)
+    from_user_hobbies = serializers.CharField(
+        source='from_user.hobbies', read_only=True)
+    from_user_interested_in = serializers.ListField(
+        source='from_user.interested_in', read_only=True)
+    from_user_photos = serializers.SerializerMethodField()
 
     class Meta:
         model = Like
         fields = (
-            'id', 'from_user', 'from_user_name', 'from_user_age',
+            'id', 'from_user', 'from_user_name', 'from_user_age', 'from_user_gender',
             'from_user_avatar', 'from_user_bio', 'from_user_location',
-            'to_user', 'created_at'
+            'from_user_hobbies', 'from_user_interested_in', 'from_user_photos',
+            'to_user', 'is_like', 'created_at'
         )
         read_only_fields = ('from_user', 'created_at')
 
@@ -117,6 +125,27 @@ class LikeSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.from_user.avatar.url)
             return obj.from_user.avatar.url
         return None
+
+    def get_from_user_photos(self, obj):
+        """Trả về list URLs của photos"""
+        request = self.context.get('request')
+        photos = obj.from_user.photos or []
+
+        if not photos:
+            return []
+
+        photo_urls = []
+        for photo_path in photos:
+            if photo_path:
+                # Build full URL
+                if request:
+                    full_url = request.build_absolute_uri(
+                        f'/media/{photo_path}')
+                else:
+                    full_url = f'/media/{photo_path}'
+                photo_urls.append(full_url)
+
+        return photo_urls
 
 
 class MatchSerializer(serializers.ModelSerializer):

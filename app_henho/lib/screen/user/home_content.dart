@@ -38,8 +38,10 @@ class _HomeContentState extends State<HomeContent> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Watch for filter changes from Provider
-    final filterProvider = context.watch<FilterProvider>();
+    // Read (not watch!) for filter changes from Provider
+    // Using watch here causes infinite loop because didChangeDependencies
+    // is called every time Provider changes
+    final filterProvider = context.read<FilterProvider>();
     final newFilterMode = filterProvider.filterMode;
     final newFilterHobby = filterProvider.filterHobby;
 
@@ -47,6 +49,13 @@ class _HomeContentState extends State<HomeContent> {
     if (newFilterMode != _currentFilterMode ||
         newFilterHobby != _currentFilterHobby) {
       print('🔄 Filter changed! Reloading candidates...');
+      print('   Old: mode=$_currentFilterMode, hobby=$_currentFilterHobby');
+      print('   New: mode=$newFilterMode, hobby=$newFilterHobby');
+
+      // Update tracking BEFORE reload to prevent multiple calls
+      _currentFilterMode = newFilterMode;
+      _currentFilterHobby = newFilterHobby;
+
       _loadCandidates(reset: true);
     }
   }
@@ -89,17 +98,11 @@ class _HomeContentState extends State<HomeContent> {
           _isLoading = false;
         });
 
-        // Update current filter tracking
-        _currentFilterMode = filterMode;
-        _currentFilterHobby = filterHobby;
-
         // Debug log
-        if (filterMode != null || filterHobby != null) {
-          print(
-            '🎯 Loaded candidates with filter: mode=$filterMode, hobby=$filterHobby',
-          );
-          print('   Total candidates: ${_candidates.length}');
-        }
+        print(
+          '🎯 Loaded candidates with filter: mode=$filterMode, hobby=$filterHobby',
+        );
+        print('   Total candidates: ${_candidates.length}');
       }
     } catch (e) {
       print('Error loading candidates: $e');

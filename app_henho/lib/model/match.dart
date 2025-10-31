@@ -26,15 +26,16 @@ class Match {
   factory Match.fromJson(Map<String, dynamic> json) {
     return Match(
       id: json['id'],
-      userId: json['user_id'],
-      name: json['user_name'] ?? '',
-      age: json['user_age'] ?? 0,
-      avatar: json['user_avatar'] ?? '',
+      // Backend returns 'other_user' fields (the matched user)
+      userId: json['other_user'] ?? json['user_id'] ?? 0,
+      name: json['other_user_name'] ?? json['user_name'] ?? '',
+      age: json['other_user_age'] ?? json['user_age'] ?? 0,
+      avatar: json['other_user_avatar'] ?? json['user_avatar'] ?? '',
       lastMessage: json['last_message'],
       lastMessageTime: json['last_message_time'] != null
           ? DateTime.parse(json['last_message_time'])
           : null,
-      matchedAt: DateTime.parse(json['matched_at']),
+      matchedAt: DateTime.parse(json['created_at'] ?? json['matched_at']),
       hasUnreadMessages: json['has_unread_messages'] ?? false,
     );
   }

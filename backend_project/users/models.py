@@ -92,18 +92,22 @@ class UserProfile(AbstractUser):
 
 
 class Like(models.Model):
-    """Model để lưu lượt thích giữa các người dùng"""
+    """Model để lưu lượt thích/không thích giữa các người dùng"""
     from_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='likes_given',
-        verbose_name='Người thích'
+        verbose_name='Người thao tác'
     )
     to_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='likes_received',
-        verbose_name='Người được thích'
+        verbose_name='Người nhận'
+    )
+    is_like = models.BooleanField(
+        default=True,
+        help_text='True = like (swipe right), False = dislike (swipe left)'
     )
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name='Thời gian')
@@ -114,12 +118,14 @@ class Like(models.Model):
         indexes = [
             models.Index(fields=['to_user', 'created_at']),
             models.Index(fields=['from_user', 'created_at']),
+            models.Index(fields=['is_like']),
         ]
-        verbose_name = 'Lượt thích'
-        verbose_name_plural = 'Lượt thích'
+        verbose_name = 'Lượt thích/không thích'
+        verbose_name_plural = 'Lượt thích/không thích'
 
     def __str__(self):
-        return f"{self.from_user.username} thích {self.to_user.username}"
+        action = "thích" if self.is_like else "không thích"
+        return f"{self.from_user.username} {action} {self.to_user.username}"
 
 
 class Match(models.Model):

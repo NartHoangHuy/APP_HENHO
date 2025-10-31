@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../model/like.dart';
 import '../../widgets/like_card.dart';
 import '../../providers/like_provider.dart';
+import '../../providers/match_provider.dart';
+import 'candidate_detail_screen.dart';
 
 // Màn hình hiển thị danh sách những người đã thích bạn
 class LikeScreen extends StatefulWidget {
@@ -31,11 +33,19 @@ class _LikeScreenState extends State<LikeScreen> {
       if (result != null) {
         // Nếu match, hiển thị thông báo
         if (result['matched'] == true) {
-          _showMatchDialog(like);
+          // Load matches trước khi show dialog
+          final matchProvider = context.read<MatchProvider>();
+          await matchProvider.loadMatches();
+
+          if (mounted) {
+            _showMatchDialog(like);
+          }
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Đã thích lại ${like.name}!')));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Đã thích lại ${like.name}!')),
+            );
+          }
         }
       }
     } catch (e) {
@@ -59,105 +69,17 @@ class _LikeScreenState extends State<LikeScreen> {
     }
   }
 
-  // Hiển thị chi tiết người dùng
+  // Hiển thị chi tiết người dùng - Navigate to CandidateDetailScreen
   void _showDetails(Like like) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    // Convert Like to Candidate and navigate
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CandidateDetailScreen(
+          candidate: like.toCandidate(),
+          // Don't pass controller - user can't swipe from detail
+        ),
       ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle bar
-              Container(
-                width: 48,
-                height: 6,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-
-              // Avatar
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.pink.shade50,
-                backgroundImage: like.avatar.isNotEmpty
-                    ? NetworkImage(like.avatar)
-                    : null,
-                child: like.avatar.isEmpty
-                    ? const Icon(Icons.person, size: 40, color: Colors.pink)
-                    : null,
-              ),
-              const SizedBox(height: 12),
-
-              // Tên và tuổi
-              Text(
-                '${like.name}, ${like.age}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-
-              // Khoảng cách
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Cách bạn ${like.distanceKm.toStringAsFixed(1)} km',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-
-              // Bio
-              if (like.bio != null && like.bio!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  like.bio!,
-                  style: const TextStyle(fontSize: 15),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 12),
-
-              // Nút Thích lại
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.favorite),
-                  label: const Text('Thích lại'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pinkAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _likeBack(like);
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -272,8 +194,14 @@ class _LikeScreenState extends State<LikeScreen> {
                       ),
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Navigate to chat screen
+                          Navigator.pop(context); // Close dialog
+
+                          // Navigate to Chat tab (index 2 trong home_screen)
+                          // Use Navigator.popUntil để về home screen
+                          Navigator.popUntil(context, (route) => route.isFirst);
+
+                          // TODO: Cần add callback để switch sang Chat tab
+                          // Hoặc navigate trực tiếp đến ChatDetailScreen
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
