@@ -3,11 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'config/app_theme.dart';
 import 'screen/login_screen.dart';
 import 'screen/user/home_screen.dart';
 import 'screen/admin/admin_dashboard_screen.dart';
+import 'providers/filter_provider.dart';
+import 'providers/like_provider.dart';
+import 'providers/match_provider.dart';
 
 void main() async {
   // Đảm bảo Flutter đã khởi tạo
@@ -26,7 +30,17 @@ void main() async {
     ),
   );
 
-  runApp(const MyApp());
+  runApp(
+    /// Wrap với MultiProvider để quản lý state toàn app
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => FilterProvider()),
+        ChangeNotifierProvider(create: (_) => LikeProvider()),
+        ChangeNotifierProvider(create: (_) => MatchProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

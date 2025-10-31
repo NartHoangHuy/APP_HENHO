@@ -20,13 +20,14 @@ class HobbySerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
+    photos_urls = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
         fields = (
-            'id', 'username', 'email', 'avatar', 'avatar_url', 'bio',
+            'id', 'username', 'email', 'avatar', 'avatar_url', 'photos', 'photos_urls', 'bio',
             'birthday', 'gender', 'location', 'latitude', 'longitude',
-            'age', 'hobbies', 'is_profile_complete', 'date_joined', 'updated_at'
+            'age', 'hobbies', 'interested_in', 'is_profile_complete', 'date_joined', 'updated_at'
         )
         read_only_fields = ('id', 'date_joined',
                             'updated_at', 'is_profile_complete')
@@ -39,16 +40,35 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return obj.avatar.url
         return None
 
+    def get_photos_urls(self, obj):
+        """Convert relative photo paths to absolute URLs"""
+        request = self.context.get('request')
+        print(
+            f"🔍 UserProfileSerializer.get_photos_urls for user {obj.username}")
+        print(f"   obj.photos type: {type(obj.photos)}, value: {obj.photos}")
+
+        if obj.photos and isinstance(obj.photos, list):
+            print(f"   ✅ Photos found: {len(obj.photos)} photos")
+            if request:
+                urls = [request.build_absolute_uri(
+                    f'/media/{photo}') for photo in obj.photos]
+                print(f"   Generated URLs: {urls}")
+                return urls
+            return [f'/media/{photo}' for photo in obj.photos]
+        print(f"   ⚠️ No photos found or not a list")
+        return []
+
 
 class DiscoverUserSerializer(serializers.ModelSerializer):
     """Serializer cho danh sách discover - hiển thị thông tin cơ bản"""
     avatar_url = serializers.SerializerMethodField()
+    photos_urls = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
         fields = (
-            'id', 'username', 'age', 'bio', 'avatar', 'avatar_url',
-            'location', 'hobbies', 'gender'
+            'id', 'username', 'age', 'bio', 'avatar', 'avatar_url', 'photos', 'photos_urls',
+            'location', 'hobbies', 'gender', 'interested_in'
         )
 
     def get_avatar_url(self, obj):
@@ -58,6 +78,15 @@ class DiscoverUserSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.avatar.url)
             return obj.avatar.url
         return None
+
+    def get_photos_urls(self, obj):
+        """Convert relative photo paths to absolute URLs"""
+        request = self.context.get('request')
+        if obj.photos and isinstance(obj.photos, list):
+            if request:
+                return [request.build_absolute_uri(f'/media/{photo}') for photo in obj.photos]
+            return [f'/media/{photo}' for photo in obj.photos]
+        return []
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -158,18 +187,20 @@ class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = (
-            'username', 'avatar', 'bio', 'birthday', 'gender',
-            'location', 'latitude', 'longitude', 'age', 'hobbies'
+            'username', 'avatar', 'photos', 'bio', 'birthday', 'gender',
+            'location', 'latitude', 'longitude', 'age', 'hobbies', 'interested_in'
         )
         extra_kwargs = {
             'username': {'required': False},
             'avatar': {'required': False},
+            'photos': {'required': False},
             'bio': {'required': False, 'max_length': 500, 'allow_blank': True},
             'birthday': {'required': False},
             'gender': {'required': False, 'allow_blank': True},
             'location': {'required': False, 'max_length': 200, 'allow_blank': True},
             'age': {'required': False, 'min_value': 18, 'max_value': 100},
             'hobbies': {'required': False, 'allow_blank': True},
+            'interested_in': {'required': False},
         }
 
     def validate_gender(self, value):
@@ -193,6 +224,14 @@ class EditProfileSerializer(serializers.ModelSerializer):
         if value and (value < 18 or value > 100):
             raise serializers.ValidationError(
                 "Tuổi phải từ 18 đến 100"
+            )
+        return value
+
+    def validate_photos(self, value):
+        """Validate photos list"""
+        if value and len(value) > 5:
+            raise serializers.ValidationError(
+                "Tối đa 5 ảnh phụ"
             )
         return value
 

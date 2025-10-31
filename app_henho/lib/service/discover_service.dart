@@ -10,11 +10,15 @@ class DiscoverService {
   // Parameters:
   // - token: JWT token để xác thực
   // - page: Trang hiện tại (phân trang)
+  // - mode: 'all' cho "Kết bạn bốn phương" (optional)
+  // - hobby: Lọc theo sở thích cụ thể (optional)
   // - gender: Lọc theo giới tính (optional)
   // - minAge, maxAge: Lọc theo độ tuổi (optional)
   Future<List<Candidate>> getDiscoverList(
     String token, {
     int page = 1,
+    String? mode,
+    String? hobby,
     String? gender,
     int? minAge,
     int? maxAge,
@@ -23,6 +27,8 @@ class DiscoverService {
       // Tạo query parameters
       final queryParams = {
         'page': page.toString(),
+        if (mode != null) 'mode': mode,
+        if (hobby != null) 'hobby': hobby,
         if (gender != null) 'gender': gender,
         if (minAge != null) 'min_age': minAge.toString(),
         if (maxAge != null) 'max_age': maxAge.toString(),

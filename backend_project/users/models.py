@@ -7,6 +7,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class UserProfile(AbstractUser):
     # Basic Info
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    photos = models.JSONField(default=list, blank=True,
+                              help_text='Danh sách các ảnh phụ (tối đa 5 ảnh)')
     bio = models.TextField(max_length=500, blank=True, null=True,
                            help_text='Giới thiệu bản thân (tối đa 500 ký tự)')
     birthday = models.DateField(blank=True, null=True, help_text='Ngày sinh')
@@ -49,6 +51,13 @@ class UserProfile(AbstractUser):
     )
     hobbies = models.TextField(
         blank=True, null=True, help_text='Sở thích (phân cách bằng dấu phẩy)')
+
+    # Interest Groups - Các mục mà user quan tâm/tham gia
+    interested_in = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Danh sách categories user quan tâm (VD: ["Người yêu", "Bạn trò chuyện"])'
+    )
 
     # Profile completion
     is_profile_complete = models.BooleanField(

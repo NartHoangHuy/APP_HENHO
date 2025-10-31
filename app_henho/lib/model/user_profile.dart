@@ -4,6 +4,8 @@ class UserProfile {
   final String email;
   final String? avatar;
   final String? avatarUrl;
+  final List<String>? photos;
+  final List<String>? photosUrls;
   final String? bio;
   final String? gender;
   final String? birthday;
@@ -22,6 +24,8 @@ class UserProfile {
     required this.email,
     this.avatar,
     this.avatarUrl,
+    this.photos,
+    this.photosUrls,
     this.bio,
     this.gender,
     this.birthday,
@@ -36,12 +40,20 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    print('🔍 UserProfile.fromJson:');
+    print('   photos field: ${json['photos']}');
+    print('   photos_urls field: ${json['photos_urls']}');
+
     return UserProfile(
       id: json['id'] ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       avatar: json['avatar'],
       avatarUrl: json['avatar_url'],
+      photos: json['photos'] != null ? List<String>.from(json['photos']) : null,
+      photosUrls: json['photos_urls'] != null
+          ? List<String>.from(json['photos_urls'])
+          : null,
       bio: json['bio'],
       gender: json['gender'],
       birthday: json['birthday'],

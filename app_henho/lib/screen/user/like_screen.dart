@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../model/like.dart';
-import '../../service/like_service.dart';
 import '../../widgets/like_card.dart';
+import '../../providers/like_provider.dart';
 
 // Màn hình hiển thị danh sách những người đã thích bạn
 class LikeScreen extends StatefulWidget {
@@ -13,59 +13,29 @@ class LikeScreen extends StatefulWidget {
 }
 
 class _LikeScreenState extends State<LikeScreen> {
-  final LikeService _likeService = LikeService();
-  List<Like> _likes = [];
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadLikes();
-  }
-
-  // Tải danh sách người đã thích từ API
-  Future<void> _loadLikes() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token != null) {
-        final likes = await _likeService.getLikesList(token);
-        setState(() {
-          _likes = likes;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading likes: $e');
-      setState(() => _isLoading = false);
-    }
+    // Load likes when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LikeProvider>().loadLikes();
+    });
   }
 
   // Thích lại người đã thích bạn
-  Future<void> _likeBack(int index) async {
-    final like = _likes[index];
-
+  Future<void> _likeBack(Like like) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final likeProvider = context.read<LikeProvider>();
+      final result = await likeProvider.likeBack(like.fromUserId);
 
-      if (token != null) {
-        final result = await _likeService.likeBack(token, like.fromUserId);
-
-        if (result != null) {
-          setState(() => _likes.removeAt(index));
-
-          // Nếu match, hiển thị thông báo
-          if (result['matched'] == true) {
-            _showMatchDialog(like);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Đã thích lại ${like.name}!')),
-            );
-          }
+      if (result != null) {
+        // Nếu match, hiển thị thông báo
+        if (result['matched'] == true) {
+          _showMatchDialog(like);
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Đã thích lại ${like.name}!')));
         }
       }
     } catch (e) {
@@ -74,22 +44,15 @@ class _LikeScreenState extends State<LikeScreen> {
   }
 
   // Bỏ qua một lượt thích
-  Future<void> _ignore(int index) async {
-    final like = _likes[index];
-
+  Future<void> _ignore(Like like) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final likeProvider = context.read<LikeProvider>();
+      final success = await likeProvider.removeLike(like.id);
 
-      if (token != null) {
-        final success = await _likeService.removeLike(token, like.id);
-
-        if (success) {
-          setState(() => _likes.removeAt(index));
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Đã bỏ qua ${like.name}.')));
-        }
+      if (success) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Đã bỏ qua ${like.name}.')));
       }
     } catch (e) {
       print('Error ignoring: $e');
@@ -97,9 +60,7 @@ class _LikeScreenState extends State<LikeScreen> {
   }
 
   // Hiển thị chi tiết người dùng
-  void _showDetails(int index) {
-    final like = _likes[index];
-
+  void _showDetails(Like like) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -188,7 +149,7 @@ class _LikeScreenState extends State<LikeScreen> {
                   ),
                   onPressed: () {
                     Navigator.pop(context);
-                    _likeBack(index);
+                    _likeBack(like);
                   },
                 ),
               ),
@@ -344,7 +305,12 @@ class _LikeScreenState extends State<LikeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    // Watch LikeProvider
+    final likeProvider = context.watch<LikeProvider>();
+    final likes = likeProvider.likes;
+    final isLoading = likeProvider.isLoading;
+
+    if (isLoading && likes.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -362,7 +328,7 @@ class _LikeScreenState extends State<LikeScreen> {
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadLikes,
+        onRefresh: () => context.read<LikeProvider>().refresh(),
         color: Colors.pink.shade400,
         child: Column(
           children: [
@@ -418,7 +384,7 @@ class _LikeScreenState extends State<LikeScreen> {
                           ),
                         ),
                         Text(
-                          '${_likes.length} người',
+                          '${likes.length} người',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -433,7 +399,7 @@ class _LikeScreenState extends State<LikeScreen> {
 
             // Danh sách
             Expanded(
-              child: _likes.isEmpty
+              child: likes.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32.0),
@@ -481,9 +447,9 @@ class _LikeScreenState extends State<LikeScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _likes.length,
+                      itemCount: likes.length,
                       itemBuilder: (context, index) {
-                        final like = _likes[index];
+                        final like = likes[index];
                         return Dismissible(
                           key: ValueKey(like.id),
                           direction: DismissDirection.endToStart,
@@ -509,12 +475,12 @@ class _LikeScreenState extends State<LikeScreen> {
                               size: 32,
                             ),
                           ),
-                          onDismissed: (_) => _ignore(index),
+                          onDismissed: (_) => _ignore(like),
                           child: LikeCard(
                             like: like,
-                            onLikeBack: () => _likeBack(index),
-                            onIgnore: () => _ignore(index),
-                            onTap: () => _showDetails(index),
+                            onLikeBack: () => _likeBack(like),
+                            onIgnore: () => _ignore(like),
+                            onTap: () => _showDetails(like),
                           ),
                         );
                       },

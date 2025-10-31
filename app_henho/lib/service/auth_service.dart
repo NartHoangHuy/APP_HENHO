@@ -146,8 +146,9 @@ class AuthService {
   Future<bool> updateProfileWithAvatar(
     String token,
     Map<String, dynamic> data,
-    String? avatarPath,
-  ) async {
+    String? avatarPath, {
+    List<String>? photoPaths,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'PUT',
@@ -166,6 +167,20 @@ class AuthService {
         var file = await http.MultipartFile.fromPath('avatar', avatarPath);
         request.files.add(file);
         print('📷 Adding avatar: $avatarPath');
+      }
+
+      // Add additional photos if provided (photo_1 to photo_5)
+      if (photoPaths != null && photoPaths.isNotEmpty) {
+        for (int i = 0; i < photoPaths.length && i < 5; i++) {
+          if (photoPaths[i].isNotEmpty) {
+            var file = await http.MultipartFile.fromPath(
+              'photo_${i + 1}',
+              photoPaths[i],
+            );
+            request.files.add(file);
+            print('📸 Adding photo_${i + 1}: ${photoPaths[i]}');
+          }
+        }
       }
 
       print('🔧 Updating profile with multipart data');

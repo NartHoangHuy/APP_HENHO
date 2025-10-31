@@ -24,18 +24,28 @@ class Candidate {
 
   // Chuyển đổi từ JSON response của backend
   factory Candidate.fromJson(Map<String, dynamic> json) {
+    // Combine avatar_url and photos_urls for images list
+    List<String> allImages = [];
+    if (json['avatar_url'] != null &&
+        json['avatar_url'].toString().isNotEmpty) {
+      allImages.add(json['avatar_url']);
+    }
+    if (json['photos_urls'] != null) {
+      allImages.addAll(List<String>.from(json['photos_urls']));
+    }
+
     return Candidate(
       id: json['id'],
       name: json['username'] ?? '',
       age: json['age'] ?? 0,
       bio: json['bio'] ?? '',
-      avatar: json['avatar'] ?? '',
+      avatar: json['avatar_url'] ?? '',
       location: json['location'],
       distanceKm: json['distance_km']?.toDouble(),
       hobbies: json['hobbies'] != null
           ? (json['hobbies'] as String).split(',').map((e) => e.trim()).toList()
           : null,
-      images: json['images'] != null ? List<String>.from(json['images']) : null,
+      images: allImages.isNotEmpty ? allImages : null,
     );
   }
 

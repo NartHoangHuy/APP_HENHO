@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../model/candidate.dart';
 import '../../service/discover_service.dart';
 import '../../widgets/candidate_card.dart';
+import '../../widgets/match_dialog.dart';
+import '../../providers/filter_provider.dart';
 
 // Màn hình chính hiển thị các thẻ profile để swipe
 class HomeContent extends StatefulWidget {
@@ -21,10 +24,31 @@ class _HomeContentState extends State<HomeContent> {
   bool _isLoading = true;
   int _currentPage = 1;
 
+  // Track current filter to detect changes
+  String? _currentFilterMode;
+  String? _currentFilterHobby;
+
   @override
   void initState() {
     super.initState();
     _loadCandidates();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Watch for filter changes from Provider
+    final filterProvider = context.watch<FilterProvider>();
+    final newFilterMode = filterProvider.filterMode;
+    final newFilterHobby = filterProvider.filterHobby;
+
+    // Reload if filter changed
+    if (newFilterMode != _currentFilterMode ||
+        newFilterHobby != _currentFilterHobby) {
+      print('🔄 Filter changed! Reloading candidates...');
+      _loadCandidates(reset: true);
+    }
   }
 
   @override
@@ -33,8 +57,8 @@ class _HomeContentState extends State<HomeContent> {
     super.dispose();
   }
 
-  // Tải danh sách người dùng để swipe từ API
-  Future<void> _loadCandidates() async {
+  // Tải danh sách người dùng để swipe từ API với filters từ Provider
+  Future<void> _loadCandidates({bool reset = false}) async {
     setState(() => _isLoading = true);
 
     try {
@@ -42,15 +66,40 @@ class _HomeContentState extends State<HomeContent> {
       final token = prefs.getString('token');
 
       if (token != null) {
+        // Get filter from Provider
+        final filterProvider = context.read<FilterProvider>();
+        final filterMode = filterProvider.filterMode;
+        final filterHobby = filterProvider.filterHobby;
+
+        // Reset candidates if filter changed or explicit reset
+        if (reset) {
+          _candidates.clear();
+          _currentPage = 1;
+        }
+
         final candidates = await _discoverService.getDiscoverList(
           token,
           page: _currentPage,
+          mode: filterMode, // 'all' or null from Provider
+          hobby: filterHobby, // hobby name or null from Provider
         );
 
         setState(() {
           _candidates.addAll(candidates);
           _isLoading = false;
         });
+
+        // Update current filter tracking
+        _currentFilterMode = filterMode;
+        _currentFilterHobby = filterHobby;
+
+        // Debug log
+        if (filterMode != null || filterHobby != null) {
+          print(
+            '🎯 Loaded candidates with filter: mode=$filterMode, hobby=$filterHobby',
+          );
+          print('   Total candidates: ${_candidates.length}');
+        }
       }
     } catch (e) {
       print('Error loading candidates: $e');
@@ -97,150 +146,22 @@ class _HomeContentState extends State<HomeContent> {
     return true;
   }
 
-  // Hiển thị dialog khi match với animation và gradient
+  // Hiển thị dialog khi match với Match Dialog component
   void _showMatchDialog(Candidate candidate) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.pink.shade50, Colors.purple.shade50],
-            ),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Animated hearts
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 600),
-                tween: Tween(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.pink.shade400, Colors.pink.shade600],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.pink.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        color: Colors.white,
-                        size: 60,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Title
-              const Text(
-                'It\'s a Match!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Message
-              Text(
-                'Bạn và ${candidate.name} đã thích nhau!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade700,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: Colors.grey.shade300, width: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text(
-                        'Tiếp tục',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.pink.shade400, Colors.pink.shade600],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.pink.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Navigate to chat screen with candidate
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          'Nhắn tin',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => MatchDialog(
+        matchedUser: candidate,
+        onSendMessage: () {
+          // TODO: Navigate to chat screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Chức năng chat đang phát triển')),
+          );
+        },
+        onKeepSwiping: () {
+          // Just close dialog and continue swiping
+        },
       ),
     );
   }
@@ -376,16 +297,71 @@ class _HomeContentState extends State<HomeContent> {
       );
     }
 
+    // Watch filter for UI display
+    final filterProvider = context.watch<FilterProvider>();
+
     return SafeArea(
       child: Column(
         children: [
+          // Filter indicator chip (if active)
+          if (filterProvider.hasActiveFilter)
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.pink.shade100, Colors.purple.shade100],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_alt, color: Colors.pink.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    filterProvider.filterDisplayText,
+                    style: TextStyle(
+                      color: Colors.pink.shade700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      filterProvider.clearFilter();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã xóa bộ lọc')),
+                      );
+                    },
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.pink.shade700,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Card swiper
           Flexible(
             child: CardSwiper(
               controller: _controller,
               cardsCount: _candidates.length,
               onSwipe: _onSwipe,
-              numberOfCardsDisplayed: 3,
+              // Ensure numberOfCardsDisplayed is at least 1 and at most cardsCount
+              numberOfCardsDisplayed: _candidates.length >= 3
+                  ? 3
+                  : _candidates.length,
               backCardOffset: const Offset(40, 40),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               cardBuilder: (context, index, _, __) {
