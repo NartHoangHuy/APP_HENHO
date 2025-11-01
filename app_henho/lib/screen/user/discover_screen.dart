@@ -6,7 +6,9 @@ import '../../providers/filter_provider.dart';
 import '../../service/interest_service.dart';
 
 class DiscoverScreen extends StatelessWidget {
-  DiscoverScreen({super.key});
+  final Function(int)? onTabChange; // Callback để chuyển tab
+
+  DiscoverScreen({super.key, this.onTabChange});
 
   // Danh sách sở thích với màu gradient và filter mapping
   final List<Map<String, dynamic>> interests = [
@@ -67,11 +69,23 @@ class DiscoverScreen extends StatelessWidget {
 
         // 📝 Add interest to user's profile automatically
         if (interest.containsKey('hobby')) {
-          final prefs = await SharedPreferences.getInstance();
-          final token = prefs.getString('token');
-          if (token != null) {
-            final interestService = InterestService();
-            await interestService.addInterest(token, interest['hobby']);
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final token = prefs.getString('token');
+            if (token != null) {
+              final interestService = InterestService();
+              final success = await interestService.addInterest(
+                token,
+                interest['hobby'],
+              );
+
+              if (!success) {
+                print('⚠️ Failed to add interest, but continuing with filter');
+              }
+            }
+          } catch (e) {
+            print('⚠️ Error adding interest: $e, but continuing with filter');
+            // Don't block user, just log error and continue
           }
         }
 
@@ -83,9 +97,27 @@ class DiscoverScreen extends StatelessWidget {
           filterProvider.setFilter(hobby: interest['hobby']);
         }
 
-        // Navigate back to Home tab (index 0)
-        // Home sẽ tự động watch FilterProvider và reload
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // 🔍 Check SharedPreferences sau khi set filter
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final isLoggedIn = prefs.getBool('isLoggedIn');
+          final token = prefs.getString('token');
+          print(
+            '🔍 [DISCOVER] After setting filter - isLoggedIn: $isLoggedIn, hasToken: ${token != null}',
+          );
+        } catch (e) {
+          print('⚠️ Error checking prefs: $e');
+        }
+
+        // 🎯 KHÔNG POP - DiscoverScreen là một TAB, không phải pushed screen!
+        // Thay vào đó, callback để HomeScreen chuyển về tab 0
+        if (onTabChange != null) {
+          print('🔙 [DISCOVER] Switching to Home tab (index 0)...');
+          onTabChange!(0); // Switch to Home tab
+          print('✅ [DISCOVER] Switched to Home tab successfully');
+        } else {
+          print('⚠️ [DISCOVER] onTabChange is null, cannot switch tabs');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

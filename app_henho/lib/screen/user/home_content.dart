@@ -31,6 +31,9 @@ class _HomeContentState extends State<HomeContent> {
   @override
   void initState() {
     super.initState();
+    print(
+      '🏠 [HOME_CONTENT] initState() called - HomeContent is being rebuilt',
+    );
     _loadCandidates();
   }
 
@@ -116,8 +119,23 @@ class _HomeContentState extends State<HomeContent> {
     int? currentIndex,
     CardSwiperDirection direction,
   ) async {
+    print(
+      '🔄 [SWIPE] previousIndex: $previousIndex, currentIndex: $currentIndex',
+    );
+    print('🔄 [SWIPE] _candidates.length: ${_candidates.length}');
+
+    // 🔥 FIX: Validate index to prevent RangeError
+    if (previousIndex < 0 || previousIndex >= _candidates.length) {
+      print(
+        '❌ [SWIPE] Invalid previousIndex: $previousIndex (list length: ${_candidates.length})',
+      );
+      return false;
+    }
+
     final candidate = _candidates[previousIndex];
     final action = direction == CardSwiperDirection.right ? 'like' : 'dislike';
+
+    print('👉 Swiped $action on ${candidate.name} (ID: ${candidate.id})');
 
     // Gửi hành động lên server
     try {
@@ -131,13 +149,34 @@ class _HomeContentState extends State<HomeContent> {
           action,
         );
 
+        // 🔥 XÓA candidate khỏi list ngay sau khi swipe thành công
+        // Validate index again before removing (async gap)
+        if (previousIndex >= 0 && previousIndex < _candidates.length) {
+          setState(() {
+            _candidates.removeAt(previousIndex);
+          });
+          print(
+            '✅ Removed candidate from list. Remaining: ${_candidates.length}',
+          );
+        } else {
+          print(
+            '⚠️ Cannot remove: index $previousIndex out of bounds (length: ${_candidates.length})',
+          );
+        }
+
         // Nếu match, hiển thị dialog
         if (result != null && result['matched'] == true) {
           _showMatchDialog(candidate);
         }
       }
     } catch (e) {
-      print('Error swiping: $e');
+      print('❌ Error swiping: $e');
+      // Nếu lỗi, vẫn xóa khỏi list để tránh swipe lại
+      if (previousIndex >= 0 && previousIndex < _candidates.length) {
+        setState(() {
+          _candidates.removeAt(previousIndex);
+        });
+      }
     }
 
     // Nếu sắp hết card, load thêm
@@ -361,13 +400,21 @@ class _HomeContentState extends State<HomeContent> {
               controller: _controller,
               cardsCount: _candidates.length,
               onSwipe: _onSwipe,
-              // Ensure numberOfCardsDisplayed is at least 1 and at most cardsCount
-              numberOfCardsDisplayed: _candidates.length >= 3
-                  ? 3
-                  : _candidates.length,
+              // 🔥 FIX: Ensure numberOfCardsDisplayed is valid
+              // Must be at least 1 (if cards exist) and at most cardsCount
+              numberOfCardsDisplayed: _candidates.isEmpty
+                  ? 1 // Fallback to 1 to prevent RangeError
+                  : (_candidates.length >= 3 ? 3 : _candidates.length),
               backCardOffset: const Offset(40, 40),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               cardBuilder: (context, index, _, __) {
+                // 🔥 FIX: Validate index in cardBuilder
+                if (index < 0 || index >= _candidates.length) {
+                  print(
+                    '❌ [CARD_BUILDER] Invalid index: $index (length: ${_candidates.length})',
+                  );
+                  return const SizedBox.shrink();
+                }
                 return CandidateCard(
                   candidate: _candidates[index],
                   controller: _controller,
@@ -399,7 +446,7 @@ class _HomeContentState extends State<HomeContent> {
                   _buildActionButton(
                     icon: Icons.rotate_left,
                     color: Colors.amber.shade400,
-                    onPressed: _controller.undo,
+                    onPressed: _candidates.isEmpty ? () {} : _controller.undo,
                     size: 46,
                   ),
                   const SizedBox(width: 10),
@@ -408,8 +455,9 @@ class _HomeContentState extends State<HomeContent> {
                   _buildActionButton(
                     icon: Icons.close,
                     color: Colors.red.shade400,
-                    onPressed: () =>
-                        _controller.swipe(CardSwiperDirection.left),
+                    onPressed: _candidates.isEmpty
+                        ? () {}
+                        : () => _controller.swipe(CardSwiperDirection.left),
                     size: 54,
                   ),
                   const SizedBox(width: 10),
@@ -418,7 +466,9 @@ class _HomeContentState extends State<HomeContent> {
                   _buildActionButton(
                     icon: Icons.star,
                     color: Colors.blue.shade400,
-                    onPressed: () => _controller.swipe(CardSwiperDirection.top),
+                    onPressed: _candidates.isEmpty
+                        ? () {}
+                        : () => _controller.swipe(CardSwiperDirection.top),
                     size: 46,
                   ),
                   const SizedBox(width: 10),
@@ -427,8 +477,9 @@ class _HomeContentState extends State<HomeContent> {
                   _buildActionButton(
                     icon: Icons.favorite,
                     color: Colors.pink.shade400,
-                    onPressed: () =>
-                        _controller.swipe(CardSwiperDirection.right),
+                    onPressed: _candidates.isEmpty
+                        ? () {}
+                        : () => _controller.swipe(CardSwiperDirection.right),
                     size: 54,
                   ),
                 ],

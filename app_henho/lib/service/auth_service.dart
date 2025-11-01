@@ -93,7 +93,11 @@ class AuthService {
   }
 
   Future<UserProfile?> getProfile(String token) async {
-    print('🔑 Token being sent: $token');
+    print(
+      '🔑 Token being sent: ${token.substring(0, 50)}... (length: ${token.length})',
+    );
+    print('🔑 Full token: $token');
+
     final response = await http.get(
       Uri.parse('${baseUrl}profile/'),
       headers: {
@@ -101,13 +105,20 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
     );
-    print('📡 Response status: ${response.statusCode}');
-    print('📦 Response body: ${response.body}');
+    print('📡 Profile Response status: ${response.statusCode}');
+    print('📦 Profile Response body: ${response.body}');
 
     if (response.statusCode == 200) {
+      print('✅ Profile loaded successfully');
       return UserProfile.fromJson(jsonDecode(response.body));
     } else if (response.statusCode == 401) {
       print('❌ 401 Unauthorized - Token không hợp lệ hoặc đã hết hạn');
+      print(
+        '⚠️ Token format check: starts with "ey"? ${token.startsWith("ey")}',
+      );
+      // DON'T AUTO LOGOUT - Let user manually logout if needed
+    } else {
+      print('❌ Unexpected status: ${response.statusCode}');
     }
     return null;
   }

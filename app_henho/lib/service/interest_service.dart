@@ -7,6 +7,10 @@ class InterestService {
   /// Add an interest to user's interested_in array
   Future<bool> addInterest(String token, String interest) async {
     try {
+      print(
+        '📤 Adding interest: "$interest" with token: ${token.substring(0, 20)}...',
+      );
+
       final response = await http.post(
         Uri.parse('${baseUrl}interests/'),
         headers: {
@@ -16,9 +20,15 @@ class InterestService {
         body: jsonEncode({'interest': interest}),
       );
 
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         print('✅ Interest "$interest" added successfully');
         return true;
+      } else if (response.statusCode == 401) {
+        print('⚠️ 401 Unauthorized - Token may be expired');
+        return false;
       } else {
         print(
           '❌ Failed to add interest: ${response.statusCode} - ${response.body}',

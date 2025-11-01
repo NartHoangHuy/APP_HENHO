@@ -47,9 +47,14 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   Future<Map<String, dynamic>> checkLoginStatus() async {
+    print('🔍 [MAIN] checkLoginStatus() called');
     final prefs = await SharedPreferences.getInstance();
     final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     final role = prefs.getString('role') ?? 'user';
+    final token = prefs.getString('token');
+    print(
+      '🔍 [MAIN] isLoggedIn: $isLoggedIn, role: $role, hasToken: ${token != null}',
+    );
     return {'isLoggedIn': isLoggedIn, 'role': role};
   }
 

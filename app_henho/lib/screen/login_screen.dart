@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'user/home_screen.dart';
@@ -79,7 +81,35 @@ class _LoginScreenState extends State<LoginScreen>
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('token', token);
-        await prefs.setString('role', 'user');
+
+        // 🔥 CRITICAL FIX: Clear old user_id from previous account!
+        // This prevents ID confusion when switching accounts
+        print('🔥 [LOGIN] Clearing old user_id from SharedPreferences...');
+        await prefs.remove('user_id');
+
+        // Fetch current user's profile to get correct user_id
+        print('🔥 [LOGIN] Fetching profile to get user_id...');
+        try {
+          final response = await http.get(
+            Uri.parse('http://192.168.1.61:8000/api/users/profile/'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final userId = data['id'];
+            await prefs.setInt('user_id', userId);
+            print('✅ [LOGIN] Saved user_id: $userId');
+            print('✅ [LOGIN] Profile: ${data['name']} (${data['email']})');
+          } else {
+            print('⚠️ [LOGIN] Failed to fetch profile: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('❌ [LOGIN] Error fetching profile: $e');
+        }
 
         if (!mounted) return;
 

@@ -114,7 +114,12 @@ class _ModernProfileScreenState extends State<ModernProfileScreen> {
 
     if (confirmed == true && mounted) {
       final prefs = await SharedPreferences.getInstance();
+
+      // 🔥 CRITICAL FIX: Clear all data including user_id to prevent confusion!
+      print('🔥 [LOGOUT] Clearing all SharedPreferences data...');
       await prefs.clear();
+      print('✅ [LOGOUT] Cleared all user data including user_id');
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),

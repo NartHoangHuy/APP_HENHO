@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../model/match.dart';
-import '../../widgets/match_card.dart';
+import '../../widgets/realtime_match_card.dart';
 import '../../providers/match_provider.dart';
 import 'chat_detail_screen.dart';
 
@@ -34,6 +34,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Mở màn hình chat chi tiết
   void _openChat(Match match) async {
+    print('🔥🔥🔥 [CHAT_SCREEN] ===== OPENING CHAT =====');
+    print('🔥 [CHAT_SCREEN] Match ID: ${match.id}');
+    print('🔥 [CHAT_SCREEN] Match userId: ${match.userId}');
+    print('🔥 [CHAT_SCREEN] Match name: ${match.name}');
+    print('🔥 [CHAT_SCREEN] Match age: ${match.age}');
+    print('🔥 [CHAT_SCREEN] Match avatar: ${match.avatar}');
+    print('🔥 [CHAT_SCREEN] Last message: ${match.lastMessage}');
+
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ChatDetailScreen(match: match)),
@@ -241,7 +249,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final match = sortedMatches[index];
-                        return MatchCard(
+                        return RealtimeMatchCard(
                           match: match,
                           onTap: () => _openChat(match),
                         );

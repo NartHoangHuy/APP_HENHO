@@ -18,27 +18,38 @@ class ChatBubble extends StatelessWidget {
           vertical: AppSpacing.xs,
           horizontal: AppSpacing.md,
         ),
-        child: Row(
-          mainAxisAlignment: isMe
-              ? MainAxisAlignment.end
-              : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
+            // Tên người gửi (chỉ hiển thị cho tin nhắn của người khác)
+            if (!isMe)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, bottom: 4),
+                child: Text(
+                  'ID: ${message.senderId}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
             // Bubble với gradient và shadow
             Container(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
               ),
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
               decoration: BoxDecoration(
-                gradient: isMe
-                    ? AppColors.primaryGradient
-                    : LinearGradient(
-                        colors: [AppColors.surface, AppColors.surface],
-                      ),
+                // Tin nhắn của mình: gradient hồng
+                // Tin nhắn người khác: màu xám nhạt
+                gradient: isMe ? AppColors.primaryGradient : null,
+                color: isMe ? null : Colors.grey.shade200,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(isMe ? AppRadius.lg : AppRadius.sm),
                   topRight: Radius.circular(isMe ? AppRadius.sm : AppRadius.lg),
@@ -49,7 +60,15 @@ class ChatBubble extends StatelessWidget {
                     isMe ? AppRadius.sm : AppRadius.lg,
                   ),
                 ),
-                boxShadow: AppShadows.small,
+                boxShadow: [
+                  BoxShadow(
+                    color: isMe
+                        ? AppColors.primary.withOpacity(0.3)
+                        : Colors.grey.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,6 +166,8 @@ class ChatBubble extends StatelessWidget {
       ),
     );
   }
+
+  // Format thời gian hiển thị (HH:mm)
 
   // Format thời gian hiển thị (HH:mm)
   String _formatTime(DateTime timestamp) {

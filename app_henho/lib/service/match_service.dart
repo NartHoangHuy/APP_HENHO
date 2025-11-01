@@ -24,11 +24,29 @@ class MatchService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List results = data['results'] ?? [];
-        return results.map((json) => Match.fromJson(json)).toList();
+
+        print('🔥🔥🔥 [MATCH_SERVICE] ===== LOADED MATCHES FROM API =====');
+        print('🔥 [MATCH_SERVICE] Total matches: ${results.length}');
+
+        final matches = results.map((json) {
+          print('🔥 [MATCH_SERVICE] Processing match:');
+          print('   - Match ID: ${json['id']}');
+          print('   - other_user: ${json['other_user']}');
+          print('   - other_user_name: ${json['other_user_name']}');
+          print('   - user_id fallback: ${json['user_id']}');
+          return Match.fromJson(json);
+        }).toList();
+
+        print('🔥 [MATCH_SERVICE] ===== FINAL MATCH LIST =====');
+        for (var match in matches) {
+          print('   Match: userId=${match.userId}, name=${match.name}');
+        }
+
+        return matches;
       }
       return [];
     } catch (e) {
-      print('Error getting matches list: $e');
+      print('❌ [MATCH_SERVICE] Error getting matches list: $e');
       return [];
     }
   }

@@ -94,6 +94,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
     await prefs.remove('token');
+
+    // 🔥 CRITICAL FIX: Clear user_id to prevent ID confusion when switching accounts!
+    print('🔥 [LOGOUT] Clearing user_id from SharedPreferences...');
+    await prefs.remove('user_id');
+    print('✅ [LOGOUT] Cleared all user data');
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -141,30 +147,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           colors: [AppColors.primary.withOpacity(0.1), AppColors.background],
         ),
       ),
-      child: CustomScrollView(
-        slivers: [
-          // Profile Header với gradient
-          SliverToBoxAdapter(
-            child: _buildProfileHeader(name, info, location, age),
-          ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile Header với gradient
+              _buildProfileHeader(name, info, location, age),
 
-          // Profile Info Cards
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                children: [
-                  _buildProfileCompletionCard(profileCompletion, lastUpdated),
-                  const SizedBox(height: 16),
-                  _buildInfoCard(email, bio, hobbies),
-                  const SizedBox(height: 16),
-                  _buildActionButtons(context),
-                  const SizedBox(height: 24), // Extra bottom padding for scroll
-                ],
+              // Profile Info Cards
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  children: [
+                    _buildProfileCompletionCard(profileCompletion, lastUpdated),
+                    const SizedBox(height: 16),
+                    _buildInfoCard(email, bio, hobbies),
+                    const SizedBox(height: 16),
+                    _buildActionButtons(context),
+                    const SizedBox(
+                      height: 24,
+                    ), // Extra bottom padding for scroll
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

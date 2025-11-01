@@ -17,14 +17,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // Danh sách các màn hình con
-  static final List<Widget> _pages = [
-    const HomeContent(), // Màn hình swipe card
-    DiscoverScreen(), // Màn hình khám phá theo sở thích
-    const LikeScreen(), // Màn hình danh sách người thích bạn
-    const ChatScreen(), // Màn hình chat
-    const ProfileScreen(), // Màn hình profile
-  ];
+  // Method để chuyển tab
+  void _switchTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  // Danh sách các màn hình con - phải build trong method để truyền callback
+  List<Widget> _buildPages() {
+    return [
+      const HomeContent(), // Màn hình swipe card
+      DiscoverScreen(
+        onTabChange: _switchTab,
+      ), // Màn hình khám phá theo sở thích với callback
+      const LikeScreen(), // Màn hình danh sách người thích bạn
+      const ChatScreen(), // Màn hình chat
+      const ProfileScreen(), // Màn hình profile
+    ];
+  }
 
   // Tiêu đề tương ứng với mỗi tab
   final List<String> _titles = [
@@ -38,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    print('🏠 [HOME] initState() called - HomeScreen is being rebuilt');
     // Hiển thị thông báo đăng nhập thành công
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showLoginSuccess) {
@@ -77,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-      body: _pages[_selectedIndex],
+      body: _buildPages()[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [

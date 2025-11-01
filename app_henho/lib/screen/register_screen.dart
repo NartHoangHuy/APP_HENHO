@@ -61,17 +61,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = false);
 
       if (success) {
+        // Use floating snackbar with flexible content to avoid overflow on small screens
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('✅ Đăng ký thành công! Vui lòng đăng nhập'),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '✅ Đăng ký thành công! Vui lòng đăng nhập',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
               ],
             ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
           ),
         );
 
@@ -116,6 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // allow scaffold to resize when keyboard opens
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
